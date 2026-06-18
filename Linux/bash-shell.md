@@ -335,8 +335,8 @@ done
 # [ ]   POSIX 标准，不直接支持 || 和正则
 # [[ ]] Bash 专属，功能更强，不需要转义
 
-[[ "abc" == a* ]]        # 通配符匹配 ✓
-[ "abc" == a* ]          # 字面比较，不匹配 ✗
+[[ "abc" == a* ]]        # 通配符匹配
+[ "abc" == a* ]          # 字面比较，不匹配
 ```
 
 ### 5.2 字符串比较
@@ -616,11 +616,11 @@ cmd &>/dev/null          # 同上，简洁写法
 **`2>&1` 的顺序陷阱：**
 
 ```bash
-# ✅ 正确：先重定向 stdout 到文件，再让 stderr 跟过去
+# 正确：先重定向 stdout 到文件，再让 stderr 跟过去
 command > output.txt 2>&1
 # 结果：stdout 和 stderr 都进入 output.txt
 
-# ❌ 错误：顺序颠倒
+# 错误：顺序颠倒
 command 2>&1 > output.txt
 # 结果：stderr 仍输出到终端，只有 stdout 进入文件
 # 原因：2>&1 执行时 stdout 还指向终端，之后 > 只重定向了 stdout
@@ -969,7 +969,7 @@ main() {
     mkdir -p "$OUTPUT_DIR"
 
     # 你的业务逻辑...
-    log "处理完成 ✅"
+    log "处理完成"
 }
 
 main "$@"

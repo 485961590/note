@@ -387,7 +387,7 @@ docker compose up -d --build
 # 停止
 docker compose down
 
-# 停止并删除卷（⚠ 数据丢失）
+# 停止并删除卷（警告：数据丢失）
 docker compose down -v
 
 # 查看日志
