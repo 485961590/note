@@ -651,7 +651,7 @@ find . -name "*.js" -not -path "*/node_modules/*" | xargs wc -l | tail -1
 
 ## 参考
 
-- [bash-shell.md](bash-shell.md) — Shell 编程参考（变量、流程控制、I/O 重定向）
+- [Bash Shell.md](Bash%20Shell.md) — Shell 编程参考（变量、流程控制、I/O 重定向）
 - [GNU Coreutils Manual](https://www.gnu.org/software/coreutils/manual/)
 - [GNU Grep Manual](https://www.gnu.org/software/grep/manual/)
 - [GNU Sed Manual](https://www.gnu.org/software/sed/manual/)

@@ -110,7 +110,7 @@ ln -s /mnt/hgfs/share/ /home/user/桌面/共享文件夹name(share)
 # 查看共享文件
 ls /mnt/hgfs/share/
 ```
-## 移动文件 / 重命名
+## 移动文件 / 重命名（mv）
 
 ```bash
 mv [选项] <源文件或目录> <目标路径>
@@ -123,12 +123,65 @@ mv [选项] <源文件或目录> <目标路径>
 | `-f` | 强制模式，直接覆盖不提示 |
 | `-n` | 不覆盖已存在的文件 |
 | `-u` | 仅当源比目标新、或目标不存在时才移动 |
+| `-b` | 覆盖前先创建备份（原文件加 `~` 后缀） |
+| `-t 目录` | 指定目标目录（源文件放最后，配合 xargs 传文件列表时很有用） |
 
-`mv` 同时也是**重命名**命令：
+**重命名：**
 
 ```bash
 mv oldname.txt newname.txt
 mv oldname.txt /home/kali/Documents/newname.txt
+```
+
+**移动：**
+
+```bash
+# 移动单个文件到目录
+mv file.txt /home/kali/Documents/
+
+# 移动目录（不需要 -r，mv 天然递归）
+mv project/ /home/kali/backup/
+
+# 一次移动多个文件
+mv *.log /var/log/archive/
+mv file1.txt file2.py script.sh /home/kali/Documents/
+
+# 移动目录内容（注意和移动目录本身的区别）
+mv source/* target/       # 移动内容
+mv source/ target/        # 移动目录本身
+```
+
+**交互与安全——防覆盖：**
+
+```bash
+# 交互模式——每次冲突都问你
+mv -i *.txt target/
+
+# 不覆盖已存在的文件（静默跳过）
+mv -n *.txt target/
+
+# 移动前先备份目标目录里可能被覆盖的文件
+mv -b source/* target/   # target 里同名文件会自动备份为 file~
+```
+
+**批量后缀修改（mv 无法直接用通配符改后缀，需要 for 循环）：**
+
+```bash
+# 把当前目录下所有 .txt 改成 .md
+for f in *.txt; do mv "$f" "${f%.txt}.md"; done
+
+# 把所有 .jpg 改成 .jpeg
+for f in *.jpg; do mv "$f" "${f%.jpg}.jpeg"; done
+```
+
+**配合 xargs 批量移动：**
+
+```bash
+# 把找到的所有 .log 文件移到 archive
+find . -name "*.log" | xargs -I {} mv {} /home/kali/logs/archive/
+
+# 用 -t 更安全（目标在前，不会因为文件名带空格而错乱）
+find . -name "*.log" -print0 | xargs -0 mv -t /home/kali/logs/archive/
 ```
 ## 解压
 
@@ -173,8 +226,8 @@ rmdir empty_folder/
 | `-f` | 强制删除，忽略不存在的文件，不做任何提示（非常危险！） |
 | `-r` / `-R` | 递归删除目录及其内部所有内容（与 `-f` 结合时威力极大，请慎用） |
 ## 创建文件/文件夹
+
 ```bash
-创建文件
 # 创建单个空文件
 touch newfile.txt
 
@@ -203,6 +256,84 @@ mkdir new_folder
 | `-p` | 递归创建，一次性创建多级不存在的父目录 |
 | `-v` | 显示详情，告知创建了哪些目录 |
 | `-m` | 设置权限，创建时直接指定权限模式 |
+
+## 复制文件/文件夹（cp）
+
+```bash
+cp [选项] <源文件> <目标路径>
+```
+
+| 选项 | 说明 |
+|------|------|
+| `-r` / `-R` | 递归复制整个目录（复制文件夹必须加这个） |
+| `-i` | 交互模式，目标已存在时询问是否覆盖 |
+| `-v` | 显示详细操作信息——抄了什么文件 |
+| `-f` | 强制覆盖，不提示 |
+| `-n` | 不覆盖已存在的文件（和 `-f` 冲突） |
+| `-p` | 保留源文件的权限、时间戳等属性（`-a` 的子集） |
+| `-a` | 归档模式——等于 `-dR --preserve=all`，递归 + 保留全部属性 + 跟随符号链接 |
+| `-u` | 仅当源比目标新、或目标不存在时才复制（增量备份用） |
+| `-b` | 覆盖前先创建备份文件（文件名加 `~` 后缀） |
+| `-l` | 不复制内容，创建硬链接 |
+| `-s` | 不复制内容，创建符号链接 |
+| `-T` | 把目标当作普通文件而不是目录（避免歧义） |
+| `--parents` | 保留源文件的完整目录结构 |
+
+**基础用法：**
+
+```bash
+# 复制单个文件
+cp file.txt /home/kali/Documents/
+
+# 复制并重命名
+cp file.txt /home/kali/Documents/newname.txt
+
+# 复制整个目录（-r 必须加，否则报错）
+cp -r project/ /home/kali/backup/
+
+# 复制目录里的内容（不包括目录本身）
+cp -r project/* /home/kali/backup/
+
+# 一次复制多个文件到同一个目录
+cp file1.txt file2.py script.sh /home/kali/Documents/
+```
+
+**保留属性复制（备份推荐）：**
+
+```bash
+# 保留权限、时间戳（-p）
+cp -rp project/ /mnt/backup/
+
+# 归档模式（-a 啥都保留——权限、时间、软链接、特殊文件等）
+cp -a /etc/nginx /mnt/backup/etc/
+# 这是做完整备份的首选方式
+```
+
+**防覆盖/增量复制：**
+
+```bash
+# 交互模式——每个冲突文件都会问你覆盖不覆盖
+cp -ri source/ target/
+
+# 只复制更新的文件（目标没有的才复制，源更旧的跳过）
+cp -ru source/ target/
+
+# 覆盖前自动备份原文件（备份文件就是原文件名加个 ~）
+cp -rb source/ target/
+```
+
+**常见场景：**
+
+```bash
+# 复制当前目录下所有 .txt 文件到目标
+cp *.txt /home/kali/Documents/
+
+# 递归复制但排除某些文件（cp 本身不支持排除，配合 rsync 或 find）
+find . -name '*.py' -exec cp --parents {} /backup/ \;
+
+# 复制时显示进度（cp 本身无进度条，改用 rsync 或 scp）
+rsync -ah --progress source/ target/
+```
 ## 查找文件
 
 ### find
@@ -302,3 +433,270 @@ find . -name config.php
 |**`tail`**|查看文件**末尾**几行|快速查看日志尾部、实时监控|只能看末尾|
 |**`nl`**|**带行号**查看文件|方便调试和引用特定行|功能与 `cat -n` 类似|
 |**`strings`**|查看二进制文件中的**可打印字符串**|分析二进制文件、提取信息|不显示不可打印字符|
+
+## 创建链接（ln）
+
+```bash
+ln [选项] <源文件> <链接名>
+```
+
+| 选项 | 说明 |
+|------|------|
+| `-s` | 创建符号链接（软链接），类似 Windows 的快捷方式 |
+| `-f` | 强制覆盖已存在的目标文件 |
+| `-n` | 如果目标是已存在的符号链接，不要跟随它（避免意外套娃） |
+| `-v` | 显示详细操作信息 |
+
+**符号链接（软链接）——最常用：**
+
+```bash
+# 创建软链接
+ln -s /opt/tool/bin/exec /usr/local/bin/exec
+
+# 创建目录的软链接
+ln -s /mnt/hgfs/share ~/桌面/共享文件夹
+
+# 删除软链接（和删普通文件一样，不影响源文件）
+rm /usr/local/bin/exec
+
+# 查看链接指向哪里
+ls -l /usr/local/bin/exec
+# 输出：/usr/local/bin/exec -> /opt/tool/bin/exec
+
+# 修改软链接指向（用 -sfn 覆盖）
+ln -sfn /opt/tool-v2/bin/exec /usr/local/bin/exec
+```
+
+**硬链接——注意和软链接的区别：**
+
+```bash
+# 创建硬链接（两个文件名指向同一个 inode，同一个物理数据）
+ln /data/bigfile.dat /backup/bigfile.dat
+
+# 硬链接删掉任意一个文件，另一个还能正常访问数据
+# 必须是同一文件系统内才能做硬链接，不能跨分区
+```
+
+| | 符号链接（-s） | 硬链接 |
+|---|---|---|
+| 本质 | 路径指针——存的是源文件的路径 | 同一 inode 的别名——指向同一份物理数据 |
+| 跨文件系统 | 可以 | 不可以 |
+| 指向目录 | 可以 | 不可以（一般不允许） |
+| 源文件删除后 | 链接变死链接（dangling），指向失效 | 另一个链接还能访问数据 |
+| 类比 | Windows 快捷方式 | 文件的另一个分身 |
+
+**实用场景：**
+
+```bash
+# 把工具加入 PATH（比改 PATH 变量更干净）
+sudo ln -s /opt/nmap/bin/nmap /usr/local/bin/nmap
+
+# 版本管理——v1 切 v2 只需改一次链接
+/opt/app/
+  myapp-v1.0/
+  myapp-v2.0/
+  current -> myapp-v2.0/        # 指向当前在用版本
+
+# 切换版本
+ln -sfn /opt/app/myapp-v2.0 /opt/app/current
+
+# 找回磁盘空间——软链接挪走大目录
+sudo mv /var/lib/docker /mnt/data/docker
+sudo ln -s /mnt/data/docker /var/lib/docker
+```
+
+## 查看文件类型（file）
+
+```bash
+# 基础用法——判断一个文件到底是什么类型的
+file unknown_file
+# 输出：unknown_file: ELF 64-bit LSB executable, x86-64
+
+file report.pdf
+# 输出：report.pdf: PDF document, version 1.4
+
+# 查看多个文件
+file *.txt
+file /usr/bin/*
+
+# 显示 MIME 类型（脚本里更好解析）
+file -i index.html
+# 输出：index.html: text/html; charset=utf-8
+
+# 不解压查看压缩包类型
+file archive.unknown
+# 输出：archive.unknown: Zip archive data
+
+# 查看软链接指向的文件类型（不加选项默认会跟随链接）
+file /usr/bin/python
+# 输出：/usr/bin/python: symbolic link to python3
+```
+
+## 磁盘与目录占用（du / df）
+
+### df — 查看分区剩余空间
+
+```bash
+# 人类可读格式（KB/MB/GB）
+df -h
+
+# 只看本地物理分区（排除 tmpfs、snap 等）
+df -h -t ext4 -t xfs -t btrfs
+
+# 显示文件系统类型
+df -hT
+
+# 显示 inode 使用情况（小文件太多时 inode 会先耗尽）
+df -i
+```
+
+### du — 查看目录/文件占用
+
+```bash
+# 查看某个目录占多少空间
+du -sh /var/log/
+
+# 递归显示每个子目录的大小
+du -h /var/log/
+
+# 只统计一层深度的子目录（很有用——找出哪个子目录最大）
+du -sh */ .[!.]*/
+
+# 按大小排序——找出当前目录下最大的 10 个东西
+du -sh * .[!.]* 2>/dev/null | sort -hr | head -10
+
+# 结合 find——查找大于 100MB 的文件
+find / -type f -size +100M -exec ls -lh {} \; 2>/dev/null
+```
+
+| 选项 | 说明 |
+|------|------|
+| `-h` | 人类可读格式 |
+| `-s` | 只显示总计，不列出子目录 |
+| `-c` | 最后打印总计 |
+| `-a` | 也显示文件大小，不光是目录 |
+| `--max-depth=N` | 限制递归深度（`du -h --max-depth=1 /var`） |
+| `-t 阈值` | 只显示大于阈值的（`du -t 100M /home`） |
+
+## 行数/字数统计（wc）
+
+```bash
+wc [选项] <文件>
+
+# 统计文件行数（最常用）
+wc -l file.txt
+
+# 统计单词数
+wc -w file.txt
+
+# 统计字符数
+wc -c file.txt
+
+# 统计字节数
+wc -m file.txt
+
+# 全统计（行 + 词 + 字符 + 文件名）
+wc file.txt
+
+# 统计当前目录下文件数量
+ls | wc -l
+
+# 统计代码行数（递归统计所有 .py 文件）
+find . -name '*.py' -exec cat {} \; | wc -l
+
+# 统计配置文件行数（排除空行和注释）
+grep -v '^\s*#' nginx.conf | grep -v '^\s*$' | wc -l
+```
+
+## 命令别名（alias）
+
+```bash
+# 查看所有别名
+alias
+
+# 临时设置（关终端就没了）
+alias ll='ls -lh'
+alias la='ls -lha'
+alias rm='rm -i'              # 给危险的命令加保护套
+
+# 取消别名
+unalias ll
+
+# 永久设置——写入 ~/.bashrc 或 ~/.zshrc
+echo "alias ll='ls -lh'" >> ~/.bashrc
+echo "alias update='sudo apt update && sudo apt upgrade -y'" >> ~/.bashrc
+source ~/.bashrc               # 立即生效
+
+# 常用别名推荐
+alias ll='ls -lh'
+alias la='ls -lha'
+alias cp='cp -i'               # 防止不小心覆盖文件
+alias mv='mv -i'               # 防止不小心覆盖文件
+alias ports='ss -tlnp'         # 快速看端口监听
+alias myip='curl ifconfig.me'  # 查公网 IP
+```
+
+## 命令历史（history）
+
+```bash
+# 查看历史
+history
+history 20                     # 只看最近 20 条
+
+# 执行历史命令
+!42                            # 执行历史里第 42 条命令
+!!                             # 重复上一条命令
+!-2                            # 执行倒数第 2 条
+!ssh                           # 执行最近一条以 ssh 开头的命令
+
+# 搜索历史（比上下翻快得多）
+Ctrl + R                       # 反向搜索——输几个字母就出来
+Ctrl + R                       # 再按一次——跳到更早的匹配
+Ctrl + G                       # 取消搜索
+
+# 清空历史
+history -c                     # 清空本次会话的历史缓存
+> ~/.bash_history              # 清空持久化文件（谨慎）
+
+# 不让某条命令进历史——在命令前加空格（需 HISTCONTROL=ignorespace）
+ echo "这条不会进历史"
+
+# 查看命令执行次数排行（看你什么命令用得最多）
+history | awk '{print $2}' | sort | uniq -c | sort -rn | head -10
+```
+
+| 环境变量 | 说明 |
+|---------|------|
+| `HISTSIZE` | 内存中保存的历史条数（默认 1000） |
+| `HISTFILESIZE` | 文件中保存的历史条数（默认 2000） |
+| `HISTFILE` | 历史文件路径（默认 `~/.bash_history`） |
+| `HISTCONTROL` | `ignoredups` 不存重复命令，`ignorespace` 空格开头的命令不记录 |
+| `HISTTIMEFORMAT` | 给历史加时间戳：`export HISTTIMEFORMAT="%F %T "` |
+
+## 文本排序与去重（sort / uniq）
+
+```bash
+# 按字母排序
+sort file.txt
+sort -r file.txt               # 倒序
+
+# 按数字排序（重要：-n 不写的话 '10' 会排在 '2' 前面）
+sort -n numbers.txt
+sort -rn numbers.txt           # 数字倒序
+
+# 按第几列排序（-k 列号）
+sort -k2 file.txt              # 第 2 列
+sort -t: -k3 -n /etc/passwd    # 以 : 为分隔符，按第 3 列数字排序（UID）
+
+# 去重（只去相邻重复行，通常先 sort 再 uniq）
+sort file.txt | uniq
+sort file.txt | uniq -c        # 去重 + 统计出现次数
+sort file.txt | uniq -d        # 只显示有重复的行
+sort file.txt | uniq -u        # 只显示不重复的行
+
+# 排序+去重一步到位
+sort -u file.txt
+
+# 统计访问最多的 IP（经典组合）
+awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -10
+```

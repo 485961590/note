@@ -937,5 +937,5 @@ timedatectl status
 
 ## 参考
 
-- [bash-shell.md](bash-shell.md) — Shell 编程参考
+- [Bash Shell.md](Bash%20Shell.md) — Shell 编程参考
 - [Linux文本处理命令.md](Linux文本处理命令.md) — 文本处理命令详解

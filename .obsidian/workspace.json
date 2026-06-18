@@ -4,49 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "82f22bed0238a7e9",
+        "id": "c93b952504410c11",
         "type": "tabs",
         "children": [
           {
-            "id": "12ba95594ed2d5b2",
+            "id": "e75ab763d30c37c7",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Code_languages/PHP.md",
+                "file": "未命名.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "PHP"
-            }
-          },
-          {
-            "id": "51ba4ef3e6cf4366",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Linux/bash-shell.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "bash-shell"
-            }
-          },
-          {
-            "id": "3b32a7538e925f12",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Linux/Linux文本处理命令.md",
-                "mode": "preview",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Linux文本处理命令"
+              "title": "未命名"
             }
           }
         ]
@@ -81,7 +53,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "",
+                "query": "docker",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -184,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Code_languages/PHP.md",
+                "file": "未命名.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "PHP 的大纲"
+              "title": "未命名 的大纲"
             }
           }
         ],
@@ -211,51 +183,52 @@
       "bases:新建数据库": false
     }
   },
-  "active": "12ba95594ed2d5b2",
+  "active": "e75ab763d30c37c7",
   "lastOpenFiles": [
-    "Code_languages/Python.md",
-    "Code_languages/JavaScript.md",
-    "Code_languages/Java.md",
-    "资料书籍/MySQL必知必会.pdf",
-    "Code_languages/JavaScript.md.tmp.1236.5db296c056d1",
-    "Code_languages/Java.md.tmp.1236.3566ecba0f09",
-    "Code_languages/PHP.md",
-    "Code_languages/PHP.md.tmp.1236.fbaabca28047",
-    "Code_languages/Python.md.tmp.1236.7eac8065150c",
-    "Code_languages",
-    "资料书籍/MSF基础.pdf",
-    "资料书籍/linux基础培训.pdf",
-    "中网信安线上/Linux文本处理命令和服务管理.pdf",
-    "Linux/Linux文本处理命令.md",
+    "Linux/防火墙配置.md",
+    "未命名.md",
+    "Project/VibeCoding.md",
+    "Linux/防火墙配置.md.tmp.6728.d5a5894efb15",
+    "ASCII编码.md",
+    "Project/网站架构与并发分析.md",
+    "Project/Web全栈项目.md",
+    "Project",
+    "git.md",
+    "Tools/Docker.md",
+    "Linux/kali linux终端使用.md",
+    "数据传输/其他配置格式.md",
+    "Linux/kali linux终端使用.md.tmp.6728.86cc709c235e",
+    "Linux/kali linux终端使用.md.tmp.6728.8aa170f679a0",
+    "Linux/kali linux终端使用.md.tmp.6728.c9b906da3f04",
+    "Linux/Linux 包管理器.md",
     "Linux/Linux-Docker.md",
     "Linux/Linux服务管理.md",
-    "Linux/bash-shell.md",
-    "Linux/kali linux终端使用.md",
-    "Linux/kali linux系统.md",
-    "数据传输/YAML.md",
-    "Linux/Linux服务管理.md.tmp.1236.4811ecc04227",
-    "数据传输/XML.md",
-    "数据传输/JSON.md",
-    "数据传输/其他配置格式.md",
-    "Web全栈项目.md",
-    "git.md",
+    "Linux/Linux文本处理命令.md",
     "Linux/Linux运维.md",
-    "ASCII编码.md",
+    "Linux/kali linux系统.md",
+    "Linux/SCP文件传输.md",
+    "Linux/SCP文件传输.md.tmp.6728.d7ae974671d9",
+    "Linux/Linux 包管理器.md.tmp.6728.197b04ea4112",
+    "Tools/Docker.md.tmp.6728.a83649233d50",
+    "Tools/sqlmap.png",
+    "Linux/Bash Shell.md",
+    "Tools/CURL.md",
+    "Tools/SQLMAP.md",
+    "中间件/Apache.md",
+    "中间件/IIS.md",
+    "中间件/IIS.md.tmp.4656.bdc1db5406b5",
+    "中间件/Nginx.md",
+    "中间件/Apache.md.tmp.4656.be483ce133f7",
+    "Code_languages/PHP.md",
+    "Code_languages/Python.md",
+    "Code_languages/JavaScript.md",
     "图片/ASCLL.png",
-    "Tools/GIT.md",
     "图片/TCPIP协议.png",
     "图片/php伪协议.png",
     "图片/网络传输架构.png",
     "图片/图片字节标识.png",
     "图片/进制标识符.png",
     "图片/常见的端口_协议.png",
-    "计网/计算网络地址，广播地址，可用地址.md",
-    "Linux/proxychain代理以及其它代理方式.md",
-    "Tools/CURL.md",
-    "Tools/DIRSEARCH.md",
-    "Tools/FOFA.md",
-    "Tools/sqlmap.png",
-    "Tools/SQLMAP.md",
     "Linux/img/file-20260402001110872.png",
     "img/file-20260610145829598.png"
   ]

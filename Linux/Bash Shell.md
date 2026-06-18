@@ -6,19 +6,19 @@
 
 ## 目录
 
-1. [基础概念](bash-shell.md#1-基础概念)
-2. [变量与参数](bash-shell.md#2-变量与参数)
-3. [字符串操作](bash-shell.md#3-字符串操作)
-4. [数组](bash-shell.md#4-数组)
-5. [条件判断](bash-shell.md#5-条件判断)
-6. [循环与迭代](bash-shell.md#6-循环与迭代)
-7. [函数](bash-shell.md#7-函数)
-8. [I/O 与重定向](bash-shell.md#8-io-与重定向)
-9. [进程与作业控制](bash-shell.md#9-进程与作业控制)
-10. [错误处理与调试](bash-shell.md#10-错误处理与调试)
-11. [常用命令速查](bash-shell.md#11-常用命令速查)
-12. [脚本模板与最佳实践](bash-shell.md#12-脚本模板与最佳实践)
-13. [进阶技巧](bash-shell.md#13-进阶技巧)
+1. [基础概念](Bash%20Shell.md#1-基础概念)
+2. [变量与参数](Bash%20Shell.md#2-变量与参数)
+3. [字符串操作](Bash%20Shell.md#3-字符串操作)
+4. [数组](Bash%20Shell.md#4-数组)
+5. [条件判断](Bash%20Shell.md#5-条件判断)
+6. [循环与迭代](Bash%20Shell.md#6-循环与迭代)
+7. [函数](Bash%20Shell.md#7-函数)
+8. [I/O 与重定向](Bash%20Shell.md#8-io-与重定向)
+9. [进程与作业控制](Bash%20Shell.md#9-进程与作业控制)
+10. [错误处理与调试](Bash%20Shell.md#10-错误处理与调试)
+11. [常用命令速查](Bash%20Shell.md#11-常用命令速查)
+12. [脚本模板与最佳实践](Bash%20Shell.md#12-脚本模板与最佳实践)
+13. [进阶技巧](Bash%20Shell.md#13-进阶技巧)
 
 ---
 
