@@ -21,7 +21,7 @@
 ├── usr/          # 用户程序和数据
 └── var/          # 可变数据
 ```
-##  **重要路径速查表**
+## 重要路径速查表
 | 路径                     | 用途              | 示例                             |
 | ---------------------- | --------------- | ------------------------------ |
 | `/usr/bin/`            | 大部分渗透工具         | `nmap`,`sqlmap`,`msfconsole`   |
@@ -30,7 +30,6 @@
 | `~/.cache/`            | 用户缓存            | `msf`缓存,`nuclei`缓存             |
 | `~/.local/share/`      | 用户数据            | `nuclei-templates`             |
 | `/tmp/`                | 临时文件            | 扫描结果、下载文件                      |
-| 渗透测试工具路径：              |                 |                                |
 | `/usr/bin/nmap`        | Nmap            | 端口扫描器                          |
 | `/usr/bin/sqlmap`      | SQLMap          | SQL注入工具                        |
 | `/usr/bin/metasploit`  | Metasploit      | 渗透框架                           |
@@ -43,7 +42,7 @@
 | `/usr/bin/nikto`       | Nikto           | Web扫描                          |
 | `/usr/bin/gobuster`    | GoBuster        | 目录爆破                           |
 | `/usr/bin/ffuf`        | FFuF            | Web模糊测试                        |
-## **Metasploit 框架**
+## Metasploit 框架
 ```
 # Metasploit 主要路径
 /usr/share/metasploit-framework/  # 主目录
@@ -57,13 +56,12 @@
 ├── data/                         # 数据文件
 └── scripts/                      # 自定义脚本
 ```
-## **配置文件和脚本**
+## 配置文件和脚本
 
-### **1. 系统配置文件**
+### 1. 系统配置文件
 
-|   |   |   |
+| 路径 | 用途 | 修改示例 |
 |---|---|---|
-|路径|用途|修改示例|
 |`/etc/apt/sources.list`|软件源|`sudo nano /etc/apt/sources.list`|
 |`/etc/proxychains4.conf`|代理链|`proxychains nmap`|
 |`/etc/hosts`|主机名解析|`sudo nano /etc/hosts`|
@@ -72,7 +70,7 @@
 |`/etc/nmap/nmap.conf`|Nmap 配置|自定义扫描参数|
 |`/etc/wireshark/`|Wireshark 配置|捕获设置|
 
-### **2. 用户配置文件**
+### 2. 用户配置文件
 
 ```
 ~/.bashrc                         # Bash配置
@@ -83,7 +81,7 @@
 ~/.cache/                         # 缓存文件
 ```
 
-### **3. 工具特定配置**
+### 3. 工具特定配置
 
 ```
 ~/.msf4/                          # Metasploit配置
@@ -93,18 +91,19 @@
 ~/.john/                          # John配置
 ~/.hashcat/                       # Hashcat配置
 ~/.ssh/                           # SSH密钥
-~/.gnupg/                         | GPG密钥
+~/.gnupg/                         # GPG密钥
 ```
 
-## **数据和资源文件**
-- **1. 字典和单词列表**
+## 数据和资源文件
+
+### 1. 字典和单词列表
 
 ```
 /usr/share/wordlists/             # 主要字典目录
 ├── rockyou.txt                   # 常用密码字典
 ├── dirb/                         # Dirb字典
 ├── dirbuster/                    # Dirbuster字典
-├── wfuzz/                        | Wfuzz字典
+├── wfuzz/                        # Wfuzz字典
 ├── seclists/                     # SecLists
 └── nmap/                         # Nmap字典
 
@@ -117,7 +116,7 @@
 └── Web-Content/                  # Web内容
 ```
 
-- **2. 工具脚本和模块**
+### 2. 工具脚本和模块
 
 ```
 /usr/share/nmap/scripts/          # Nmap脚本
@@ -127,8 +126,9 @@
 /usr/share/set/                   # Social-Engineer Toolkit
 /usr/share/responder/             # Responder
 ```
-## **安全和权限**
-**1. 用户和权限**
+## 安全和权限
+
+### 1. 用户和权限
 ```
 /etc/passwd                       # 用户账户
 /etc/shadow                       # 密码哈希
@@ -136,14 +136,14 @@
 /etc/sudoers                      # Sudo权限
 /var/log/auth.log                 # 认证日志
 ```
-**2. 防火墙和网络**
+### 2. 防火墙和网络
 ```
 /etc/iptables/                    # iptables规则
 /etc/nftables.conf                # nftables配置
 /etc/network/interfaces           # 网络接口
 /etc/systemd/network/             # systemd网
 ```
-## **临时文件处理**
+## 临时文件处理
 ```
 # 清理临时文件
 sudo rm -rf /tmp/*
@@ -153,7 +153,7 @@ sudo apt autoclean
 # 但保留重要数据
 mkdir -p ~/scans/ ~/tools/ ~/reports/
 ```
-## **符号链接常见路径**
+## 符号链接常见路径
 ```
 # 查看实际路径
 ls -l /bin/sh      # 通常指向 bash 或 dash
