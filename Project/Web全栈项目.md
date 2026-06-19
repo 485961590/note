@@ -1131,310 +1131,485 @@ curl http://localhost:5000/api/check?url=baidu.com
 
 ---
 
-## 第 9 步：从 Docker 搬到真实服务器
 
-Docker 只是容器，最终还是要部署到一台真实的服务器上。完整路径：
+## 第 9 步：真实服务器部署实战（Rocky Linux 9 + Apache + mod_wsgi）
 
-```
-本地开发（你现在完成的）
-      │
-      ▼
-Docker 部署（同一台机器，验证能跑）
-      │
-      ▼
-服务器部署（云服务器/物理机/虚拟机，挂反向代理）
-```
+> 本节以 security-header-checker 项目为例，记录在 Rocky Linux 9 上使用 Apache + mod_wsgi 完成生产部署的完整过程。项目从 `/root/` 迁移到 `/var/www/`，解决 403/500 错误，最终实现局域网内浏览器访问。
 
-### 常见 Web 服务器
-
-Docker 容器里 Gunicorn 直接对外是够的。到了真实服务器上，前面需要挂一个 Web 服务器做**反向代理**——它接收外部请求，转给后面的 Gunicorn，同时处理静态文件、SSL、限流。
-
-| | Apache | Nginx | IIS |
-|---|---|---|---|
-| 定位 | 老牌全能，模块丰富 | 高性能、高并发、轻量 | Windows 生态首选 |
-| 反向代理 | `mod_proxy` 模块 | `proxy_pass` 指令 | ARR + URL Rewrite |
-| 配置风格 | `.conf` 或 `.htaccess`（目录级覆盖） | 集中式 `.conf` | GUI 图形界面 + XML |
-| 静态文件 | 快 | 极快 | 快 |
-| 常见场景 | 传统企业、虚拟主机 | 互联网公司、容器化项目 | Windows 内网、.NET 应用 |
-
-下面给出 Apache 和 Nginx 两种反代方案的完整配置。不管你选哪个，反代的本质是同一件事：
+### 架构图
 
 ```
-浏览器 → Apache/Nginx（80/443 端口）→ Gunicorn（5000 端口，不对外暴露）
-         处理 SSL、静态文件              只处理 Python 逻辑
+┌─────────────────┐     ┌─────────────────────────────────────────────┐
+│ 用户浏览器       │     │ Rocky Linux 虚拟机                          │
+│ (Kali 物理机)   │────▶│ ┌─────────────────────────────────────┐     │
+│                 │     │ │ Apache (端口 80)                      │     │
+│ 请求 URL:       │     │ │ ├── httpd.conf                       │     │
+│ /api/check...   │     │ │ └── conf.d/header-checker.conf       │     │
+└─────────────────┘     │ └───────────────┬─────────────────────┘     │
+                        │                 │ WSGI 协议                  │
+                        │                 ▼                            │
+                        │ ┌─────────────────────────────────────┐     │
+                        │ │ mod_wsgi                            │     │
+                        │ │ (Apache 的 Python WSGI 模块)         │     │
+                        │ └───────────────┬─────────────────────┘     │
+                        │                 │ 调用                        │
+                        │                 ▼                            │
+                        │ ┌─────────────────────────────────────┐     │
+                        │ │ wsgi.py (入口文件)                   │     │
+                        │ │ from app import app as application   │     │
+                        │ └───────────────┬─────────────────────┘     │
+                        │                 │                            │
+                        │                 ▼                            │
+                        │ ┌─────────────────────────────────────┐     │
+                        │ │ Flask 应用 (app.py)                  │     │
+                        │ │ ├── 路由装饰器                       │     │
+                        │ │ ├── 安全检查逻辑                     │     │
+                        │ │ └── templates/ HTML 模板             │     │
+                        │ └───────────────┬─────────────────────┘     │
+                        │                 │ 依赖                        │
+                        │                 ▼                            │
+                        │ ┌─────────────────────────────────────┐     │
+                        │ │ 虚拟环境 (venv/)                     │     │
+                        │ │ ├── Python 3.9                       │     │
+                        │ │ ├── Flask 3.0.3                      │     │
+                        │ │ ├── gunicorn 21.2.0                  │     │
+                        │ │ ├── requests 2.31.0                  │     │
+                        │ │ └── 其他依赖包                       │     │
+                        │ └─────────────────────────────────────┘     │
+                        └─────────────────────────────────────────────┘
 ```
 
-### 方案 A：Apache 做反向代理
+### 各组件角色说明
 
-确保 Apache 启用了反向代理模块：
+理解每个组件在请求链路中承担什么职责，是排错和优化的前提。
+
+| 组件 | 角色 | 在整个链路中做了什么 |
+|------|------|---------------------|
+| **用户浏览器** | 请求发起者 | 发送 HTTP 请求到服务器的 80 端口。URL 中的域名/IP 决定了请求到达哪台机器 |
+| **Apache (httpd)** | Web 服务器 / 反向代理 | 监听 80 端口，接收所有 HTTP 请求。根据 VirtualHost 配置决定把请求交给谁处理——静态文件自己直接返回，Python 请求交给 mod_wsgi |
+| **mod_wsgi** | Apache 模块 / 桥梁 | 嵌入在 Apache 进程中的 Python 解释器宿主。它实现 WSGI 协议，把 Apache 收到的 HTTP 请求翻译成 Python 能理解的格式，调用 Flask 应用，再把 Flask 的返回值翻译回 HTTP 响应 |
+| **WSGI 协议** | 规范 / 接口约定 | Python Web 应用和 Web 服务器之间的标准接口。它规定：服务器调用一个名为 `application` 的可调用对象，传入 `environ`（环境变量字典，含请求信息）和 `start_response`（回调函数，用来设置状态码和响应头），应用返回可迭代的响应体 |
+| **wsgi.py** | 入口文件 / 适配器 | 唯一作用是暴露一个名为 `application` 的变量。它把项目路径加入 `sys.path`，然后 `from app import app as application`。Apache 不认识 Flask，它只通过 WSGI 协议找 `application` 对象 |
+| **Flask 应用 (app.py)** | 业务逻辑 | 处理路由匹配、参数解析、调用安全检查逻辑、渲染模板。它不关心请求是从 Apache 来的还是从 Flask 开发服务器来的——这正是 WSGI 的价值：应用和服务器解耦 |
+| **虚拟环境 (venv/)** | 依赖隔离 | 为这个项目提供独立的 Python 解释器和第三方包。Apache 通过 `python-home` 指向 venv 来使用其中的 Python 和包，不影响系统 Python 环境 |
+
+**请求处理流程（一次完整的 API 调用）：**
+
+```
+1. 用户浏览器 → GET /api/check?url=baidu.com HTTP/1.1
+2. Apache 收到请求 → 匹配 VirtualHost → 命中 WSGIScriptAlias / → 交给 mod_wsgi
+3. mod_wsgi → 构造 WSGI environ 字典（PATH_INFO=/api/check, QUERY_STRING=url=baidu.com, ...）
+4. mod_wsgi → 调用 wsgi.py 中的 application(environ, start_response)
+5. Flask → 匹配路由 @app.route('/api/check') → 执行 check_headers()
+6. Flask → requests.get(目标 URL) → 解析响应头 → 构造 JSON
+7. Flask → 返回 Response 对象 → mod_wsgi 接收
+8. mod_wsgi → 翻译为 HTTP 响应 → Apache 发送给浏览器
+9. 浏览器 → 收到 JSON，渲染结果
+```
+
+> **关键理解**：Apache 和 Flask 之间不直接通信。mod_wsgi 是翻译官——Apache 说 HTTP，Flask 说 Python，mod_wsgi 在中间通过 WSGI 协议互相翻译。这就是为什么你在开发时用 `flask run` 也能跑，生产部署时换成 Apache+mod_wsgi 也能跑——Flask 代码本身不需要改，因为无论是 Flask 开发服务器还是 mod_wsgi，都遵循同一个 WSGI 协议。
+
+---
+
+### 一、初始环境检查
+
+#### 1.1 项目原始位置
 
 ```bash
-# Ubuntu/Debian
-sudo a2enmod proxy proxy_http headers
-sudo systemctl restart apache2
-
-# CentOS/RHEL
-# /etc/httpd/conf.modules.d/00-proxy.conf 中确认以下行已取消注释
-# LoadModule proxy_module modules/mod_proxy.so
-# LoadModule proxy_http_module modules/mod_proxy_http.so
+[root@localhost ~]# ls -la /root/security-header-checker/
+app.py  docker-compose.yml  Dockerfile  requirements.txt  security-header-checker_venv  templates
 ```
 
-添加虚拟主机配置：
+项目最初位于 `/root/` 下，后续因权限问题迁移到 `/var/www/`。
+
+#### 1.2 系统环境信息
+
+```bash
+# 操作系统
+[root@localhost ~]# cat /etc/redhat-release
+Rocky Linux release 9.5 (Blue Onyx)
+
+# Python 版本
+[root@localhost ~]# python3 --version
+Python 3.9.18
+
+# Apache 版本
+[root@localhost ~]# httpd -v
+Server version: Apache/2.4.57
+```
+
+---
+
+### 二、Python 虚拟环境准备
+
+#### 2.1 创建虚拟环境
+
+```bash
+[root@localhost ~]# cd /root/security-header-checker
+[root@localhost security-header-checker]# python3 -m venv venv
+```
+
+#### 2.2 激活并安装依赖
+
+```bash
+[root@localhost security-header-checker]# source venv/bin/activate
+(venv) [root@localhost security-header-checker]# pip install --upgrade pip
+(venv) [root@localhost security-header-checker]# pip install -r requirements.txt
+```
+
+#### 2.3 验证依赖安装
+
+```bash
+(venv) [root@localhost security-header-checker]# pip list | grep -E "Flask|requests|gunicorn"
+Flask              3.0.3
+gunicorn           21.2.0
+requests           2.31.0
+```
+
+---
+
+### 三、Apache 与 mod_wsgi 安装
+
+#### 3.1 安装所需软件包
+
+```bash
+[root@localhost security-header-checker]# dnf install -y httpd mod_wsgi
+```
+
+#### 3.2 验证 mod_wsgi 模块
+
+```bash
+[root@localhost security-header-checker]# ls -la /etc/httpd/modules/ | grep wsgi
+-rwxr-xr-x. 1 root root 252848  7月 29  2025 mod_wsgi_python3.so
+
+[root@localhost security-header-checker]# grep -r "mod_wsgi" /etc/httpd/conf.modules.d/
+/etc/httpd/conf.modules.d/10-wsgi-python3.conf:    LoadModule wsgi_module modules/mod_wsgi_python3.so
+```
+
+---
+
+### 四、WSGI 入口文件配置
+
+#### 4.1 创建 wsgi.py
+
+```bash
+[root@localhost security-header-checker]# cat > wsgi.py << 'EOF'
+import sys
+import os
+
+# 将项目目录添加到 Python 路径
+sys.path.insert(0, '/root/security-header-checker') 
+
+# 导入 Flask 应用
+from app import app as application
+EOF
+```
+
+---
+
+### 五、Apache 虚拟主机配置
+
+#### 5.1 创建配置文件
+
+```bash
+[root@localhost security-header-checker]# cat > /etc/httpd/conf.d/header-checker.conf << 'EOF'
+<VirtualHost *:80>
+    ServerName localhost
+    ServerAdmin root@localhost
+
+    WSGIDaemonProcess header-checker python-path=/root/security-header-checker:/root/security-header-checker/venv/lib/python3.11/site-packages
+    WSGIProcessGroup header-checker
+    WSGIScriptAlias / /root/security-header-checker/wsgi.py
+
+    <Directory /root/security-header-checker>
+        Require all granted
+    </Directory>
+
+    ErrorLog /var/log/httpd/header-checker-error.log
+    CustomLog /var/log/httpd/header-checker-access.log combined
+</VirtualHost>
+EOF
+```
+
+---
+
+### 六、权限与 SELinux 配置
+
+#### 6.1 设置文件权限（此时项目还在 /root）
+
+```bash
+[root@localhost security-header-checker]# chown -R apache:apache /root/security-header-checker
+[root@localhost security-header-checker]# chmod -R 755 /root/security-header-checker
+[root@localhost security-header-checker]# chmod 755 /root/security-header-checker/wsgi.py
+```
+
+#### 6.2 遇到的问题与排查
+
+**问题 1：403 Forbidden**
+
+```bash
+[root@localhost security-header-checker]# systemctl restart httpd
+[root@localhost security-header-checker]# curl http://localhost/api/check?url=baidu.com
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<html><head><title>403 Forbidden</title></head><body>...</body></html>
+```
+
+原因：Apache 用户 `apache` 无法访问 `/root` 目录。
+
+**问题 2：500 Internal Server Error**
+
+```bash
+[root@localhost security-header-checker]# curl http://localhost/api/check?url=baidu.com
+<title>500 Internal Server Error</title>
+```
+
+错误日志：
+
+```bash
+[root@localhost security-header-checker]# tail -50 /var/log/httpd/header-checker-error.log
+ModuleNotFoundError: No module named 'flask'
+```
+
+原因：mod_wsgi 使用的是系统 Python，而非虚拟环境中的 Python。
+
+---
+
+### 七、解决方案：迁移项目到 /var/www/
+
+#### 7.1 迁移项目文件
+
+```bash
+[root@localhost security-header-checker]# cp -r /root/security-header-checker /var/www/
+```
+
+#### 7.2 更新路径配置
+
+```bash
+# 更新 wsgi.py
+[root@localhost security-header-checker]# sed -i 's|/root/security-header-checker|/var/www/security-header-checker|g' /var/www/security-header-checker/wsgi.py
+
+# 更新 Apache 配置
+[root@localhost security-header-checker]# sed -i 's|/root/security-header-checker|/var/www/security-header-checker|g' /etc/httpd/conf.d/header-checker.conf
+```
+
+#### 7.3 重新设置权限
+
+```bash
+[root@localhost security-header-checker]# chown -R apache:apache /var/www/security-header-checker
+[root@localhost security-header-checker]# chmod -R 755 /var/www/security-header-checker
+```
+
+#### 7.4 更新 Apache 配置（指定虚拟环境 Python）
+
+最终配置如下：
 
 ```apache
-# /etc/apache2/sites-available/header-checker.conf（Ubuntu）
-# 或 /etc/httpd/conf.d/header-checker.conf（CentOS）
-
 <VirtualHost *:80>
-    ServerName check.yourdomain.com      # 换成你的域名或 IP
+    ServerName localhost
+    ServerAdmin root@localhost
 
-    # 反向代理：把所有请求转发给 Gunicorn
-    ProxyPreserveHost On
-    ProxyPass / http://127.0.0.1:5000/
-    ProxyPassReverse / http://127.0.0.1:5000/
+    # 关键：指定 python-home 指向虚拟环境
+    WSGIDaemonProcess header-checker python-home=/var/www/security-header-checker/venv python-path=/var/www/security-header-checker:/var/www/security-header-checker/venv/lib/python3.11/site-packages
+    WSGIProcessGroup header-checker
+    WSGIScriptAlias / /var/www/security-header-checker/wsgi.py
 
-    # 日志
-    ErrorLog ${APACHE_LOG_DIR}/header-checker-error.log
-    CustomLog ${APACHE_LOG_DIR}/header-checker-access.log combined
+    <Directory /var/www/security-header-checker>
+        Require all granted
+    </Directory>
+
+    ErrorLog /var/log/httpd/header-checker-error.log
+    CustomLog /var/log/httpd/header-checker-access.log combined
 </VirtualHost>
 ```
 
-启用并重载：
+#### 7.5 SELinux 处理
 
 ```bash
-# Ubuntu
-sudo a2ensite header-checker.conf
-sudo systemctl reload apache2
-
-# CentOS
-sudo systemctl reload httpd
+# 临时关闭 SELinux（测试用）
+[root@localhost security-header-checker]# setenforce 0
 ```
 
-部署流程：
-
-```bash
-# 1. 服务器上启动 Gunicorn（只监听 127.0.0.1，不对外）
-gunicorn --bind 127.0.0.1:5000 --workers 2 --daemon app:app
-
-# 2. 配好 Apache 反代后
-sudo systemctl restart apache2
-
-# 3. 访问 http://服务器IP 即可
-# Gunicorn 不对外暴露 5000 端口，安全性更好
-```
-
-### 方案 B：Nginx 做反向代理
-
-```nginx
-# /etc/nginx/sites-available/header-checker.conf
-
-server {
-    listen 80;
-    server_name check.yourdomain.com;    # 换成你的域名或 IP
-
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-```bash
-# Ubuntu
-sudo ln -s /etc/nginx/sites-available/header-checker.conf /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-### 用 Docker Compose 模拟真实架构
-
-不必等有真实服务器才学——在本地用 Compose 把 Apache/Nginx + Gunicorn 组网，效果一样：
-
-```yaml
-# docker-compose.yml
-version: "3.8"
-
-services:
-  # 反向代理层
-  apache:
-    image: httpd:2.4
-    container_name: proxy
-    ports:
-      - "80:80"
-    volumes:
-      - ./apache.conf:/usr/local/apache2/conf/httpd.conf
-    depends_on:
-      - app
-
-  # 应用层（Gunicorn 只对内部 5000，不映射到宿主机）
-  app:
-    build: .
-    container_name: flask-app
-    # 注意：没有 ports，外部无法直接访问
-```
-
-这样就真正做到了生产级结构——外部请求打到 Apache，Apache 转给 Gunicorn，Flask 容器不对外暴露。
+后续建议执行 `setsebool -P httpd_execmem 1` 永久放行，并配置正确的 SELinux 上下文。
 
 ---
 
-## 第 10 步：内置 curl 测试端点
+### 八、防火墙配置
 
-上面的 app.py 不仅是安全头检查工具，还内置了 12 个专门用于 curl 练习的测试端点。这些端点的设计逻辑参照了 httpbin，覆盖了 HTTP 协议的核心概念。
+#### 8.1 放行 HTTP 服务
 
-### 为什么加这个
-
-写完安全头检查工具后，你会频繁用 curl 去验证 API。但 curl 能做的事情远不止 `curl http://localhost:5000/api/check?url=xxx`：
-
-- 不同 HTTP 方法（GET/POST/PUT/DELETE/PATCH/OPTIONS/HEAD）有什么区别？
-- 请求头长什么样？curl 默认发了哪些头？
-- JSON body 和表单 body 有什么不同？
-- 重定向有哪几种？`curl -L` 做了什么？
-- Cookie 怎么设置、怎么回传？
-- Basic 认证的流程是什么？
-- Content-Type 有哪些常见值？
-
-这些端点就是用来探索这些问题的——每个端点返回的信息都是**自描述的**，让你能看到 curl 命令背后实际发生的 HTTP 交互。
-
-### 端点列表
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/endpoints` | GET | 列出所有可用端点 |
-| `/api/echo` | GET/POST/PUT/DELETE/PATCH | 回显完整请求信息（method/headers/query/body/form/json/files/IP） |
-| `/api/methods` | GET/POST/PUT/DELETE/PATCH/OPTIONS/HEAD | 回显 HTTP 方法，OPTIONS 返回 Allow 头 |
-| `/api/status/<code>` | GET | 返回指定的 HTTP 状态码（100-599） |
-| `/api/redirect` | GET | 重定向测试（301/302/303/307/308），支持链式跳转 1-5 次 |
-| `/api/cookie/set` | GET | 设置 cookie（name/value/max_age/http_only/secure/same_site） |
-| `/api/cookie/get` | GET | 读取并返回请求中携带的 cookie |
-| `/api/basic-auth` | GET | Basic 认证测试（admin/secret123），返回 401 + WWW-Authenticate |
-| `/api/delay/<seconds>` | GET | 延迟响应（0-30 秒），测试 --max-time / --connect-timeout |
-| `/api/content-type/<type>` | GET | 返回指定 Content-Type 的示例响应（json/xml/html/plain/css/javascript/csv） |
-| `/api/upload` | POST | 接收文件上传（仅读取不保存，限制 1MB） |
-| `/api/size` | POST/PUT | 测量请求体大小 |
-
-### 学习路线
-
-建议按以下顺序逐步探索（从简单到复杂）：
-
-**阶段 1：认识 HTTP 方法**
 ```bash
-curl http://localhost:5000/api/methods           # 默认 GET
-curl -X POST http://localhost:5000/api/methods    # 显式指定方法
-curl -X OPTIONS -i http://localhost:5000/api/methods  # 看 Allow 响应头
-curl -I http://localhost:5000/api/methods         # HEAD 请求，只看响应头
+[root@localhost security-header-checker]# firewall-cmd --add-service=http --permanent
+success
+[root@localhost security-header-checker]# firewall-cmd --reload
+success
 ```
 
-**阶段 2：看清请求全貌**
+#### 8.2 验证防火墙规则
+
 ```bash
-# GET 带查询参数
-curl "http://localhost:5000/api/echo?name=张三&age=25"
-
-# POST JSON 数据
-curl -X POST http://localhost:5000/api/echo \
-  -H "Content-Type: application/json" \
-  -d '{"name":"张三","role":"student"}'
-
-# POST 表单数据（curl 默认 Content-Type: application/x-www-form-urlencoded）
-curl -X POST http://localhost:5000/api/echo -d "name=张三&role=student"
-
-# 自定义请求头
-curl http://localhost:5000/api/echo \
-  -H "X-Custom-Header: test-value" \
-  -H "Authorization: Bearer eyJhbGciOi..."
+[root@localhost security-header-checker]# firewall-cmd --list-all
+public
+  target: default
+  icmp-block-inversion: no
+  interfaces: ens33
+  sources:
+  services: dhcpv6-client http ssh
+  ports:
+  protocols:
+  forward: no
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
 ```
-
-**阶段 3：状态码和重定向**
-```bash
-# 各种状态码
-curl -i http://localhost:5000/api/status/200
-curl -i http://localhost:5000/api/status/301
-curl -i http://localhost:5000/api/status/404
-curl -i http://localhost:5000/api/status/500
-
-# 重定向：不加 -L 看到 302，加了才跟踪
-curl -i "http://localhost:5000/api/redirect?to=/api/echo"
-curl -L "http://localhost:5000/api/redirect?to=/api/echo"
-
-# 链式跳转 3 次
-curl -L -v "http://localhost:5000/api/redirect?n=3&to=/api/status/200" 2>&1 | grep -E "^< HTTP|^> GET"
-```
-
-**阶段 4：Cookie 和认证**
-```bash
-# 设置 cookie 并保存到文件
-curl -c /tmp/cookies.txt "http://localhost:5000/api/cookie/set?name=session&value=abc123"
-
-# 下次请求带上 cookie
-curl -b /tmp/cookies.txt http://localhost:5000/api/cookie/get
-
-# 不保存文件，直接传 cookie 字符串
-curl -b "name1=val1; name2=val2" http://localhost:5000/api/cookie/get
-
-# Basic 认证：无凭据返回 401
-curl -i http://localhost:5000/api/basic-auth
-
-# 带上凭据
-curl -u admin:secret123 http://localhost:5000/api/basic-auth
-
-# 手动构造 Authorization 头（等价于 -u）
-echo -n "admin:secret123" | base64   # 得到 YWRtaW46c2VjcmV0MTIz
-curl -H "Authorization: Basic YWRtaW46c2VjcmV0MTIz" http://localhost:5000/api/basic-auth
-```
-
-**阶段 5：高级场景**
-```bash
-# 超时测试
-time curl -s -o /dev/null http://localhost:5000/api/delay/2
-curl --max-time 1 http://localhost:5000/api/delay/3; echo "退出码: $?"
-
-# 不同 Content-Type 的响应
-curl http://localhost:5000/api/content-type/json
-curl http://localhost:5000/api/content-type/xml
-curl http://localhost:5000/api/content-type/html
-curl -w "\nContent-Type: %{content_type}\n" -o /dev/null -s http://localhost:5000/api/content-type/javascript
-
-# 文件上传
-echo "Hello, this is a test file." > /tmp/test.txt
-curl -F "file=@/tmp/test.txt" http://localhost:5000/api/upload
-curl -F "file=@/tmp/test.txt" -F "note=附加说明" http://localhost:5000/api/upload
-
-# 测量请求体大小
-curl -X POST http://localhost:5000/api/size -d "Hello, HTTP!"
-curl -X POST http://localhost:5000/api/size -d "AAAAAAAAAA...（一大段文本）"
-```
-
-**综合练习：组合使用 curl 的格式化输出**
-```bash
-# 查看完整的请求-响应时间线
-curl -w "\n---\n耗时明细:\n  DNS解析: %{time_namelookup}s\n  建立连接: %{time_connect}s\n  SSL握手: %{time_appconnect}s\n  首字节: %{time_starttransfer}s\n  总耗时: %{time_total}s\n  HTTP状态码: %{http_code}\n  下载大小: %{size_download} bytes\n" -o /dev/null -s http://localhost:5000/api/echo
-
-# 同时查看请求头和响应体
-curl -v http://localhost:5000/api/echo 2>&1 | grep -E "^>|^<|^{\""
-```
-
-### 端点的安全考虑
-
-- **文件上传不落盘**：`/api/upload` 只把文件读到内存获取大小，不写入服务器磁盘，防止滥用
-- **上传大小限制 1MB**：超过返回 413
-- **延迟上限 30 秒**：防止单个请求长时间占用 worker
-- **重定向链上限 5 次**：防止无限重定向循环
-- **密码比较用 `hmac.compare_digest`**：常量时间比较，防止时序攻击
 
 ---
 
-## 后续可以扩展的方向
+### 九、最终验证与测试
 
-- 增加更多检查项（Cookie 安全属性、CORS 头、Server 头泄露等）
-- 保存检查历史到 SQLite 数据库
-- 添加批量检查（上传域名列表）
-- 生成 PDF 报告
-- 用 Nginx 做反向代理，加 HTTPS
-- 加登录认证，防止被滥用
-- 扩充 curl 测试端点（支持更多 Content-Type、JWT 认证、gzip 压缩、CORS 模拟等）
+#### 9.1 检查 Apache 服务状态
 
-每个扩展都是一次独立的学习——往哪个方向走取决于你想深入前端、后端还是安全本身。
+```bash
+[root@localhost security-header-checker]# systemctl status httpd
+● httpd.service - The Apache HTTP Server
+     Loaded: loaded (/usr/lib/systemd/system/httpd.service; disabled; preset: disabled)
+     Active: active (running) since Fri 2026-06-19 00:46:03 CST; 2min 10s ago
+   Main PID: 505022 (httpd)
+     Status: "Total requests: 15; Idle/Busy workers 100/0;Requests/sec: 0.115; Bytes served/sec:  75 B/sec"
+      Tasks: 195 (limit: 10425)
+     Memory: 44.0M (peak: 44.5M)
+        CPU: 338ms
+```
+
+#### 9.2 本地 API 测试
+
+```bash
+[root@localhost security-header-checker]# curl http://localhost/api/check?url=baidu.com
+{"present_count":2,"results":[...],"status_code":200,"total":7,"url":"https://www.baidu.com/"}
+```
+
+#### 9.3 外部访问测试（Kali 物理机）
+
+```bash
+┌──(kali㉿kali)-[~]
+└─$ curl http://192.168.230.139/api/check?url=baidu.com
+{"present_count":2,"results":[...],"status_code":200,"total":7,"url":"https://www.baidu.com/"}
+```
+
+#### 9.4 浏览器访问
+
+在 Kali 物理机浏览器中输入：
+
+```
+http://192.168.230.139/api/check?url=baidu.com
+```
+
+---
+
+### 十、项目最终目录结构
+
+```bash
+[root@localhost security-header-checker]# tree /var/www/security-header-checker/
+/var/www/security-header-checker/
+├── app.py
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+├── templates/
+│   └── index.html
+├── venv/
+│   ├── bin/
+│   │   ├── activate
+│   │   ├── pip
+│   │   ├── python -> python3
+│   │   └── python3 -> /usr/bin/python3
+│   ├── lib/
+│   │   └── python3.11/
+│   │       └── site-packages/
+│   │           ├── flask/
+│   │           ├── requests/
+│   │           └── gunicorn/
+│   ├── pyvenv.cfg
+│   └── share/
+└── wsgi.py
+```
+
+---
+
+### 十一、关键配置总结
+
+#### 11.1 Apache 虚拟主机配置
+
+| 配置项 | 值 |
+|--------|-----|
+| 配置文件路径 | `/etc/httpd/conf.d/header-checker.conf` |
+| 监听端口 | `80` |
+| 虚拟环境路径 | `/var/www/security-header-checker/venv` |
+| WSGI 入口 | `/var/www/security-header-checker/wsgi.py` |
+| 错误日志 | `/var/log/httpd/header-checker-error.log` |
+| 访问日志 | `/var/log/httpd/header-checker-access.log` |
+
+#### 11.2 常用管理命令
+
+| 操作 | 命令 |
+|------|------|
+| 重启 Apache | `systemctl restart httpd` |
+| 查看状态 | `systemctl status httpd` |
+| 查看错误日志 | `tail -50 /var/log/httpd/header-checker-error.log` |
+| 查看访问日志 | `tail -50 /var/log/httpd/header-checker-access.log` |
+| 测试配置文件 | `httpd -t` |
+| 开机自启 | `systemctl enable httpd` |
+| 防火墙放行 HTTP | `firewall-cmd --add-service=http --permanent && firewall-cmd --reload` |
+
+---
+
+### 十二、故障排查索引
+
+| 错误代码 | 可能原因 | 解决方案 |
+|----------|---------|---------|
+| 403 Forbidden | Apache 用户无权访问目录 | 将项目移至 `/var/www/` 并设置权限 |
+| 500 Internal Server Error | mod_wsgi 找不到 Flask 模块 | 在 Apache 配置中指定 `python-home` 指向虚拟环境 |
+| `No module named 'flask'` | 使用了系统 Python 而非虚拟环境 | 检查 `WSGIDaemonProcess` 中 `python-home` 配置 |
+| 连接被拒绝 | 防火墙未放行端口 | 执行 `firewall-cmd --add-service=http --permanent` |
+| SELinux 阻止访问 | SELinux 安全策略限制 | 临时 `setenforce 0`，永久 `setsebool -P httpd_execmem 1` |
+
+---
+
+### 十三、更新与维护指南
+
+#### 13.1 更新代码
+
+```bash
+# 1. 上传新代码到 /var/www/security-header-checker/
+# 2. 重启 Apache
+[root@localhost security-header-checker]# systemctl restart httpd
+```
+
+#### 13.2 更新 Python 依赖
+
+```bash
+[root@localhost security-header-checker]# source venv/bin/activate
+(venv) [root@localhost security-header-checker]# pip install -r requirements.txt --upgrade
+(venv) [root@localhost security-header-checker]# deactivate
+[root@localhost security-header-checker]# systemctl restart httpd
+```
+
+---
+
+### 十四、部署清单
+
+- [ ] Python 虚拟环境创建与依赖安装
+- [ ] Apache + mod_wsgi 安装
+- [ ] `wsgi.py` 入口文件创建
+- [ ] Apache 虚拟主机配置文件编写
+- [ ] 项目从 `/root` 迁移到 `/var/www/`
+- [ ] 文件权限设置（`chown` + `chmod`）
+- [ ] SELinux 策略调整（`setenforce 0` / `setsebool`）
+- [ ] 防火墙放行 HTTP 服务
+- [ ] 本地 API 测试通过
+- [ ] 外部网络访问测试通过
+- [ ] Apache 开机自启设置
 
 ---
 
@@ -1444,73 +1619,4 @@ curl -v http://localhost:5000/api/echo 2>&1 | grep -E "^>|^<|^{\""
 - [OWASP: Secure Headers Project](https://owasp.org/www-project-secure-headers/)
 - [Flask 官方文档](https://flask.palletsprojects.com/)
 - [Docker 使用笔记](Linux-Docker.md)
-
----
-
-## VibeCoding 自检
-
-用 [VibeCoding.md](VibeCoding.md) 的四个标准审视本文档：
-
-### 1. 核心链路是什么
-
-**已明确。** 文档定义了两条核心链路：
-
-- **业务链路**：用户输入 URL → Flask 发 HTTP 请求取响应头 → 解析 7 个安全头 → 返回 JSON → 前端渲染结果卡片
-- **部署链路**：`app.py` + `index.html` → `pip install` 本地跑通 → Dockerfile 构建镜像 → `docker run` 容器化 → Apache/Nginx 反代上生产
-
-第 1 步把项目结构画了出来（5 个文件），第 9 步画了本地→Docker→服务器的升级路线，链路清晰。
-
-**不足**：文档长达 1447 行，核心链路被大量细节包裹。建议在文档开头加一段 5 行的"核心链路速览"，让人不读完全文也能把握主干。
-
-### 2. 每个卡点怎么验证
-
-**部分覆盖。** 已有的验证点：
-
-| 卡点 | 验证方式 | 位置 |
-|------|---------|------|
-| 依赖安装 | `pip install -r requirements.txt && python app.py`，浏览器打开 localhost:5000 | 第 4 步 |
-| Docker 构建 | `docker build -t header-checker .` 然后 `docker run`，curl 测试 | 第 6 步 |
-| 防火墙 | 给出 ufw / firewalld / Windows 防火墙放行命令 | 第 7 步 |
-| 全流程 | docker ps + curl API + 浏览器 + 手机 4 项检查 | 第 8 步 |
-| Curl 端点 | 分 5 个阶段给出测试命令，每个阶段可独立验证 | 第 10 步 |
-
-**缺失的验证点**：
-
-- `app.py` 写完后到前端写完前，中间没有一个独立的 API 验证步骤。建议在写完 `app.py` 后加一段"先不写前端，用 curl 验证 API 能通"——现在的第 10 步放在了全文末尾，应该前置到第 2 步和第 3 步之间作为一个独立的验证卡点。
-- 反向代理配置（Apache/Nginx）只有配置示例，没有"怎么验证反代生效"的步骤（比如 `curl -I http://服务器IP` 检查响应头中是否有代理标记）。
-- Dockerfile 写完到构建之前没有验证——没有提示"先确认 `requirements.txt` 里的包和 `app.py` 的 import 一致"。
-
-### 3. 能不能优先用 API 调用
-
-**做到了。** 整个应用就是 API-first 设计：
-
-- 核心功能 `/api/check?url=xxx` 是独立的 API，不依赖前端也能用 curl 测试
-- 内置 12 个 curl 测试端点，覆盖 HTTP 方法、状态码、重定向、Cookie、认证、Content-Type、超时、文件上传——全部可以通过命令行独立验证
-- 前端通过 `fetch()` 调用 API，前后端完全解耦
-- curl 端点的学习路线（5 个阶段）就是从 API 角度逐步探索 HTTP 协议
-
-每个端点都可以脱离 UI 单独测试，这是 VibeCoding 最看重的特质。
-
-### 4. Spec 文档中有没有成功标准
-
-**有，但分散在文档各处，没有集中列出。**
-
-从文档中可以提取出以下隐含的成功标准：
-
-- 7 个安全头全部检查（HSTS / CSP / X-Frame-Options / X-Content-Type-Options / Referrer-Policy / Permissions-Policy / X-XSS-Protection）
-- 正确统计"已配置"和"缺失"数量
-- 处理常见错误：无 URL、无效 URL、SSL 证书错误、连接超时、重定向过多
-- Docker 容器可启动，局域网其他设备可通过 IP:5000 访问
-- 12 个 curl 端点全部可正常响应
-
-**建议**：在文档开头（第 1 步之前）加一个 `## 成功标准` 章节，用 5-8 条 checklist 把上面的标准明确列出来，每条都是可验证的布尔条件。比如：
-
-> - [ ] `curl http://localhost:5000/api/check?url=example.com` 返回 7 个安全头的检查结果
-> - [ ] 输入无协议的域名（`baidu.com`）自动补全 `https://`
-> - [ ] SSL 证书错误的域名返回友好提示而非崩溃
-> - [ ] Docker 容器运行后，手机连同一 WiFi 可访问
-> - [ ] 12 个 curl 端点全部返回预期响应
-
----
-
-**总结**：本文档在核心链路和 API-first 两点上做得很好。验证卡点大部分存在但分散，建议把 API 验证步骤前置到写完 `app.py` 之后。成功标准隐含在正文中，建议抽取为一个独立的 checklist 放在开头，实践前就能对照勾选。
+- [Apache HTTP Server（RHEL 系）](../中间件/Apache-RHEL.md)

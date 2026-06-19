@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "c93b952504410c11",
+        "id": "b5786b615a1c2eef",
         "type": "tabs",
         "children": [
           {
-            "id": "e75ab763d30c37c7",
+            "id": "f087c22f76203384",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "未命名.md",
-                "mode": "source",
+                "file": "Project/Web全栈项目.md",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "未命名"
+              "title": "Web全栈项目"
             }
           }
         ]
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "未命名.md",
+                "file": "Project/Web全栈项目.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "未命名 的大纲"
+              "title": "Web全栈项目 的大纲"
             }
           }
         ],
@@ -183,45 +183,44 @@
       "bases:新建数据库": false
     }
   },
-  "active": "e75ab763d30c37c7",
+  "active": "f087c22f76203384",
   "lastOpenFiles": [
+    "Project/Web全栈项目.md",
+    "Project/Web全栈项目.md.tmp.24732.1f08df4cd9ad",
+    "Project/网站架构与并发分析.md",
+    "中间件/Apache-RHEL.md",
+    "中间件/tmp_append.md",
+    "中间件/tmp_append.md.tmp.24732.01fffe8380b4",
+    "中间件/Nginx-Debian.md",
+    "Project/Web全栈项目.md.tmp",
     "Linux/防火墙配置.md",
+    "中间件/Nginx-RHEL.md",
+    "中间件/Apache-RHEL.md.tmp.24732.f80f46e3cd3c",
+    "中间件/Apache-Debian.md",
+    "中间件/Apache-Debian.md.tmp.24732.cb10b02b35e0",
+    "Tools/CURL.md",
+    "Tools/Docker.md",
+    "Project/Web全栈项目.md.tmp.24732.62ea60a7c472",
+    "Project/Web全栈项目.md.tmp.24732.3f9e6a23c5bf",
+    "Project/Web全栈项目.md.tmp.24732.ae9dc8372d5b",
+    "Project/Web全栈项目.md.tmp.24732.e6a447eb4d23",
+    "中间件/Apache.md",
+    "中间件/IIS.md",
+    "Linux/Linux 包管理器.md",
     "未命名.md",
     "Project/VibeCoding.md",
     "Linux/防火墙配置.md.tmp.6728.d5a5894efb15",
     "ASCII编码.md",
-    "Project/网站架构与并发分析.md",
-    "Project/Web全栈项目.md",
-    "Project",
     "git.md",
-    "Tools/Docker.md",
     "Linux/kali linux终端使用.md",
     "数据传输/其他配置格式.md",
-    "Linux/kali linux终端使用.md.tmp.6728.86cc709c235e",
-    "Linux/kali linux终端使用.md.tmp.6728.8aa170f679a0",
-    "Linux/kali linux终端使用.md.tmp.6728.c9b906da3f04",
-    "Linux/Linux 包管理器.md",
     "Linux/Linux-Docker.md",
     "Linux/Linux服务管理.md",
     "Linux/Linux文本处理命令.md",
     "Linux/Linux运维.md",
     "Linux/kali linux系统.md",
     "Linux/SCP文件传输.md",
-    "Linux/SCP文件传输.md.tmp.6728.d7ae974671d9",
-    "Linux/Linux 包管理器.md.tmp.6728.197b04ea4112",
-    "Tools/Docker.md.tmp.6728.a83649233d50",
     "Tools/sqlmap.png",
-    "Linux/Bash Shell.md",
-    "Tools/CURL.md",
-    "Tools/SQLMAP.md",
-    "中间件/Apache.md",
-    "中间件/IIS.md",
-    "中间件/IIS.md.tmp.4656.bdc1db5406b5",
-    "中间件/Nginx.md",
-    "中间件/Apache.md.tmp.4656.be483ce133f7",
-    "Code_languages/PHP.md",
-    "Code_languages/Python.md",
-    "Code_languages/JavaScript.md",
     "图片/ASCLL.png",
     "图片/TCPIP协议.png",
     "图片/php伪协议.png",
