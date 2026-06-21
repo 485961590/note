@@ -391,61 +391,22 @@ getent group devteam
 
 ### 文件权限
 
-```bash
-# 修改权限（数字模式）
-chmod 755 script.sh            # rwxr-xr-x
-chmod 644 file.txt             # rw-r--r--
-chmod 600 id_rsa               # rw-------
+> 详细的权限管理（chmod 数字/符号模式、chown、chgrp、umask、setuid/setgid/sticky bit、chattr/lsattr 扩展属性、ACL、SELinux）已独立为 [权限管理](权限管理.md)。
 
-# 修改权限（符号模式）
-chmod u+x script.sh            # 所有者加执行
-chmod g-w file.txt             # 组去掉写
-chmod o= file.txt              # 其他人无权限
-chmod -R 755 /var/www/         # 递归修改
-
-# 修改所有者
-sudo chown user:group file.txt
-sudo chown -R user:group /var/www/
-
-# 修改所属组
-chgrp devteam file.txt
-
-# 设置默认权限掩码
-umask 022                      # 目录 755 / 文件 644
-```
-
-### 扩展属性（chattr / lsattr）
-
-`chattr` 设置的文件属性能**凌驾于 root** 之上——连 root 也无法修改或删除被 `+i` 标记的文件，直到属性被移除。
+**常用命令速查：**
 
 ```bash
-# 查看文件扩展属性
-lsattr file.txt
-lsattr -a /var/log/               # 含隐藏文件
-lsattr -R /etc/nginx/             # 递归查看
+# 权限
+chmod 755 file                   # rwxr-xr-x
+chmod 600 id_rsa                 # rw-------
+chown user:group file            # 改属主属组
+umask 022                        # 默认权限掩码
 
-# 设置为不可变（不可修改、删除、重命名、链接）
-sudo chattr +i important.conf
-
-# 设置只可追加（只能追加内容，不能删除和修改已有内容）
-sudo chattr +a app.log
-
-# 移除属性
-sudo chattr -i important.conf
-sudo chattr -a app.log
+# 扩展属性（安全加固常用）
+sudo chattr +i important.conf    # 设为不可变（连 root 也不能改/删）
+sudo chattr +a app.log           # 设为仅追加（日志防清除）
+lsattr file.txt                  # 查看扩展属性
 ```
-
-| 属性 | 说明 |
-|------|------|
-| `i` | 不可变，连 root 也无法修改/删除/重命名/创建硬链接 |
-| `a` | 只可追加写入，已有内容不可修改或删除（适合日志文件） |
-| `A` | 不更新 atime（访问时间），减少磁盘 I/O |
-| `S` | 修改实时同步到磁盘（类似 sync 挂载） |
-| `s` | 删除时安全擦除，数据块用零填充 |
-| `d` | 排除在 dump 备份之外 |
-| `e` | extent 格式（ext4 文件系统默认，不可手动设置） |
-
-**注意：** 设置为 `+i` 后，任何写入（包括 `rm -f`、`chmod`、文件内容修改）都会被内核直接拒绝。要修改文件必须先执行 `chattr -i` 移除属性。
 
 ### sudo 配置
 
@@ -937,5 +898,8 @@ timedatectl status
 
 ## 参考
 
+- [权限管理](权限管理.md) — 文件权限、chattr、ACL、SELinux 完整文档
+- [SELinux 详解](SELinux.md) — SELinux 强制访问控制
+- [Linux服务管理](Linux服务管理.md) — systemd 服务管理
 - [Bash Shell.md](Bash%20Shell.md) — Shell 编程参考
 - [Linux文本处理命令.md](Linux文本处理命令.md) — 文本处理命令详解

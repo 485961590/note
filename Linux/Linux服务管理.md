@@ -273,6 +273,15 @@ systemctl list-unit-files --state=enabled > /var/log/baseline_services_$(date +%
 
 ---
 
+## 参考
+
+- [权限管理](权限管理.md) — 服务相关的文件权限、chattr、SELinux
+- [Linux运维](Linux运维.md) — 系统运维命令速查
+- [systemd 官方文档](https://systemd.io/)
+- [systemd.service(5)](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
+
+---
+
 ## 简单总结
 
 ```
