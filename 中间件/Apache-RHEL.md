@@ -377,6 +377,8 @@ sudo setenforce 1
 sudo ausearch -m avc -ts recent
 ```
 
+> mod_wsgi + Python C 扩展的 SELinux 排障案例见 [[Apache-mod_wsgi-SELinux排障]]。
+
 ---
 
 ## 7. 命令速查

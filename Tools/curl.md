@@ -14,7 +14,9 @@ curl [选项] [URL]
 |------|------|
 | `-X, --request <METHOD>` | 指定请求方法（GET / POST / PUT / DELETE...） |
 | `-H, --header <HEADER>` | 添加请求头 |
+| `-A, --user-agent <STR>` | 设置 User-Agent |
 | `-d, --data <DATA>` | 发送 POST 数据 |
+| `--compressed` | 请求压缩响应 |
 | `-F, --form <name=content>` | 上传文件（multipart/form-data） |
 | `-o, --output <FILE>` | 保存到指定文件 |
 | `-O, --remote-name` | 保存为远程文件名 |
@@ -22,14 +24,24 @@ curl [选项] [URL]
 | `-I, --head` | 仅获取响应头（HEAD 请求） |
 | `-v, --verbose` | 详细输出 |
 | `-s, --silent` | 静默模式 |
+| `-S, --show-error` | 静默时仍显示错误 |
+| `-f, --fail` | HTTP 错误时返回非零退出码 |
 | `-k, --insecure` | 忽略 SSL 证书验证 |
+| `--cacert <FILE>` | 指定 CA 证书 |
 | `-L, --location` | 跟随重定向 |
 | `-u, --user <user:password>` | 基本认证 |
+| `--digest` | Digest 认证 |
 | `-b, --cookie <data>` | 发送 Cookie |
 | `-c, --cookie-jar <FILE>` | 保存 Cookie 到文件 |
 | `-x, --proxy <[protocol://]host:port>` | 使用代理 |
+| `--resolve <host:port:addr>` | 自定义 DNS 解析 |
 | `-w, --write-out <FORMAT>` | 自定义输出格式 |
 | `--connect-timeout <SEC>` | 连接超时时间 |
+| `--max-time <SEC>` | 整个请求的最大时长 |
+| `--retry <NUM>` | 失败重试次数 |
+| `--retry-delay <SEC>` | 重试间隔时间 |
+| `--retry-max-time <SEC>` | 重试总时长上限 |
+| `--retry-connrefused` | 连接拒绝时也重试 |
 | `-C, --continue-at <OFFSET>` | 断点续传 |
 | `--limit-rate <SPEED>` | 限速下载 |
 
@@ -83,6 +95,15 @@ curl -v http://example.com                                        # 详细输出
 curl -i http://example.com                                        # 响应包含头部
 curl -w "\n状态码: %{http_code}\n" http://example.com              # 自定义输出格式
 curl -o /dev/null -s -w "%{http_code}" http://example.com         # 仅输出状态码
+
+# 静默但显示错误（脚本调试必备）
+curl -s -S http://example.com
+
+# HTTP 错误时返回非零退出码（脚本中判断成功/失败）
+curl -f http://example.com/notfound
+
+# 组合：静默 + 出错退出（自动化脚本标准写法）
+curl -f -s -S -o /dev/null http://example.com/api
 ```
 
 ### 6. 连接与代理
@@ -93,6 +114,38 @@ curl -k https://self-signed.example.com                 # 忽略证书错误
 curl -x http://127.0.0.1:8080 http://example.com        # HTTP 代理
 curl -x socks5://127.0.0.1:1080 http://example.com      # SOCKS5 代理
 curl --connect-timeout 10 http://example.com            # 连接超时 10 秒
+```
+
+### 7. 重试与容错
+
+```bash
+# 最多重试 3 次，每次间隔 2 秒
+curl --retry 3 --retry-delay 2 http://unstable.example.com/api
+
+# 重试总时间不超过 30 秒（防止无限重试）
+curl --retry 5 --retry-max-time 30 http://unstable.example.com/api
+
+# 连接拒绝也重试（默认 --retry 不重试 connection refused）
+curl --retry 3 --retry-connrefused http://example.com
+
+# 设置总超时 + 失败静默退出（脚本友好的健壮请求）
+curl --max-time 10 -f -s -S http://example.com
+```
+
+### 8. SSL/TLS
+
+```bash
+# 指定 CA 证书验证服务器（自建 CA 或企业内网）
+curl --cacert /path/to/ca-cert.pem https://example.com
+
+# 客户端证书认证（双向 TLS / mTLS）
+curl --cert client.pem --key client-key.pem https://example.com
+
+# 指定最低 TLS 版本（禁用旧协议）
+curl --tlsv1.2 https://example.com
+
+# 忽略证书验证（仅测试用，生产环境禁用）
+curl -k https://self-signed.example.com
 ```
 
 ## 实用场景
@@ -165,3 +218,7 @@ curl -s http://example.com/script.sh | less
 | `%{time_starttransfer}` | 首字节时间（TTFB） |
 | `%{size_download}` | 下载字节数 |
 | `%{content_type}` | 响应 Content-Type |
+| `%{http_version}` | HTTP 协议版本 |
+| `%{num_redirects}` | 重定向次数 |
+| `%{redirect_url}` | 重定向目标 URL |
+| `%{ssl_verify_result}` | SSL 证书校验结果（0=成功） |

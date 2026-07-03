@@ -2,6 +2,14 @@
 
 dirsearch 是一个 Web 路径暴力扫描工具，用于发现 Web 服务器上的隐藏目录和文件。
 
+## 基本语法
+
+```bash
+python3 dirsearch.py -u <URL> [选项]
+# 或直接调用（取决于安装方式）
+dirsearch -u <URL> [选项]
+```
+
 ## 快速开始
 
 ```bash
@@ -19,11 +27,11 @@ python3 dirsearch.py -l targets.txt -o report.json
 
 ### 目标设置
 
-| 选项 | 说明 |
-|------|------|
-| `-u, --url=URL` | 目标 URL |
+| 选项                    | 说明             |
+| --------------------- | -------------- |
+| `-u, --url=URL`       | 目标 URL         |
 | `-l, --url-list=FILE` | 从文件读取目标 URL 列表 |
-| `--stdin` | 从标准输入读取目标 URL |
+| `--stdin`             | 从标准输入读取目标 URL  |
 
 ### 字典与扩展名
 
@@ -73,12 +81,12 @@ python3 dirsearch.py -l targets.txt -o report.json
 
 ### 递归扫描
 
-| 选项 | 说明 |
-|------|------|
-| `-r, --recursive` | 对发现的目录递归扫描 |
-| `--recursion-depth=N` | 最大递归深度（默认 0；`-r` = depth 1） |
-| `--scan-subdirs=DIRS` | 递归时扫描指定子目录（逗号分隔） |
-| `--exclude-subdirs=DIRS` | 递归时排除指定子目录 |
+| 选项                         | 说明                          |
+| -------------------------- | --------------------------- |
+| `-r, --recursive`          | 对发现的目录递归扫描                  |
+| `-R` `--recursion-depth=N` | 最大递归深度（默认 0；`-r` = depth 1） |
+| `--scan-subdirs=DIRS`      | 递归时扫描指定子目录（逗号分隔）            |
+| `--exclude-subdirs=DIRS`   | 递归时排除指定子目录                  |
 
 ### 输出
 
@@ -91,63 +99,100 @@ python3 dirsearch.py -l targets.txt -o report.json
 
 ## 常用示例
 
-### 1. 基础扫描
+### 一、基础扫描
 
 ```bash
-# 默认字典 + 常见扩展名
-python3 dirsearch.py -u http://target.com -e php,html,js,txt,bak,zip
+# 1. 最简单的扫描（内置默认字典）
+dirsearch -u http://192.168.230.128
 
-# 使用大字典
-python3 dirsearch.py -u http://target.com \
-  -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt \
-  -e php,html,js
+# 2. 指定 PHP 扩展名
+dirsearch -u http://192.168.230.128 -e php
+
+# 3. 指定多个扩展名
+dirsearch -u http://192.168.230.128 -e php,html,txt,zip,bak,old
+
+# 4. 自定义线程数（默认 25）
+dirsearch -u http://192.168.230.128 -e php -t 50
 ```
 
-### 2. 带认证的扫描
+### 二、字典选择
 
 ```bash
-# 携带 Cookie 扫描需要登录的路径
-python3 dirsearch.py -u http://target.com/admin \
-  -H "Cookie: sessionid=abc123" \
-  -e php
+# 5. 使用更大的字典
+dirsearch -u http://192.168.230.128 -e php -w /usr/share/dirsearch/db/dicc.txt
 
-# 携带多个请求头
-python3 dirsearch.py -u http://target.com \
-  -H "Authorization: Bearer token123" \
-  -H "X-Custom: value"
+# 6. 查看内置字典列表（字典路径/usr/lib/python3/dist-packages/dirsearch/db/）
+dirsearch --wordlists 
+
+# 7. 创建自己的小字典来测试 API 路径
+echo -e "admin\nbackup\nconfig\napi\nv1\nv2\ndocs\ntest\ndev" > custom.txt
+dirsearch -u http://192.168.230.128 -w custom.txt -e php
 ```
 
-### 3. 隐蔽扫描（避免被封）
+### 三、递归扫描
 
 ```bash
-# 代理 + 随机 UA + 低线程 + 延迟
-python3 dirsearch.py -u http://target.com \
-  --proxy socks5://127.0.0.1:9050 \
+# 8. 递归扫描（发现目录后深入扫描）
+dirsearch -u http://192.168.230.128 -e php -r
+
+# 9. 限制递归深度
+dirsearch -u http://192.168.230.128 -e php -R 2
+```
+
+### 四、过滤输出
+
+```bash
+# 10. 排除无用状态码，只看有价值的
+dirsearch -u http://192.168.230.128 -e php -x 404,403,400
+
+# 11. 只显示特定状态码
+dirsearch -u http://192.168.230.128 -e php -i 200,302,301,401
+
+# 12. 排除不同大小的 200 误报（bWAPP 很多页面返回 200 报错页）
+dirsearch -u http://192.168.230.128 -e php --exclude-sizes=0B
+```
+
+### 五、伪装与绕过
+
+```bash
+# 13. 随机 User-Agent
+dirsearch -u http://192.168.230.128 -e php --random-agent
+
+# 14. 自定义 User-Agent（伪装 Google 爬虫）
+dirsearch -u http://192.168.230.128 -e php --user-agent="Mozilla/5.0 (compatible; Googlebot/2.1)"
+
+# 15. 请求延迟（避免触发速率限制）
+dirsearch -u http://192.168.230.128 -e php --delay=0.3
+
+# 16. 使用 Cookie（bWAPP 登录后有些页面需要 session）
+dirsearch -u http://192.168.230.128 -e php --cookie="security_level=0; PHPSESSID=your_session_id"
+```
+
+### 六、输出保存
+
+```bash
+# 17. 输出为纯文本报告
+dirsearch -u http://192.168.230.128 -e php -o bWAPP_scan.txt
+
+# 18. 输出为 JSON（方便后续脚本处理）
+dirsearch -u http://192.168.230.128 -e php -o bWAPP_scan.json --format=json
+
+# 19. 同时输出多种格式
+dirsearch -u http://192.168.230.128 -e php --format=json -o results.json
+```
+
+### 七、高级组合
+
+```bash
+# 20. 综合扫描（大字典 + 递归 + 多扩展名 + 伪装 + 输出）
+dirsearch -u http://192.168.230.128 \
+  -e php,html,txt,bak,zip,sql,inc,conf \
+  -r -R 3 \
+  -t 30 \
   --random-agent \
-  --delay 0.5 \
-  -t 10
-```
-
-### 4. 高级过滤
-
-```bash
-# 只看有效结果
-python3 dirsearch.py -u http://target.com --status-codes 200,301,302,403
-
-# 排除干扰
-python3 dirsearch.py -u http://target.com --exclude-status 404,500,502
-
-# 批量扫描，自动跳过被限速的目标
-python3 dirsearch.py -l targets.txt --skip-on-status 429
-```
-
-### 5. 递归扫描（限速防 WAF）
-
-```bash
-python3 dirsearch.py -u http://target.com \
-  -r --recursion-depth 2 \
-  --delay 1 \
-  --exclude-status 404
+  --delay=0.2 \
+  -x 404,403 \
+  -o bWAPP_full.json --format=json
 ```
 
 ## 结果解读
@@ -186,6 +231,7 @@ python3 dirsearch.py \
 ```
 
 各参数说明：
+
 | 参数 | 作用 |
 |------|------|
 | `-e aspx,ashx,...` | 针对 ASP.NET 的常见扩展名 |

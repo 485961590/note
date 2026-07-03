@@ -211,6 +211,8 @@ setsebool -P use_nfs_home_dirs on
 # -P 表示永久生效，不加 -P 则重启后恢复
 ```
 
+常用布尔值的详细说明见 [[SELinux布尔值参考]]。
+
 ---
 
 ## 5. 排障方法
