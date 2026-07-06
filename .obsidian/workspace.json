@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "a42467eddba0d702",
+        "id": "f194308727a80985",
         "type": "tabs",
         "children": [
           {
-            "id": "f5bfb155432dacd2",
+            "id": "7512aade1639eb6f",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "vuln-lab/Cross-site request forgery (CSRF)/Cross-site request forgery (CSRF).md",
+                "file": "vuln-lab/Cross-site scripting (XSS)/Cross-site scripting (XSS).md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Cross-site request forgery (CSRF)"
+              "title": "Cross-site scripting (XSS)"
             }
           }
         ]
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "vuln-lab/Cross-site request forgery (CSRF)/Cross-site request forgery (CSRF).md",
+                "file": "vuln-lab/Cross-site scripting (XSS)/Cross-site scripting (XSS).md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Cross-site request forgery (CSRF) 的大纲"
+              "title": "Cross-site scripting (XSS) 的大纲"
             }
           }
         ],
@@ -183,16 +183,35 @@
       "bases:新建数据库": false
     }
   },
-  "active": "f5bfb155432dacd2",
+  "active": "7512aade1639eb6f",
   "lastOpenFiles": [
-    "vuln-lab/Cross-site request forgery (CSRF)/img/file-20260703011545697.png",
-    "vuln-lab/Cross-site request forgery (CSRF)/img",
-    "vuln-lab/Cross-site request forgery (CSRF)/未命名.md",
-    "vuln-lab/Cross-site request forgery (CSRF)/Cross-site request forgery (CSRF).md",
-    "vuln-lab/Cross-site request forgery (CSRF)/Cross-site request forgery (CSRF).md.tmp.11788.fa0eb32c8f25",
-    "Claude code安装/Claude Code 安装记录.md",
-    "vuln-lab/Cross-site request forgery (CSRF)",
     "Tools/sqlmap.md",
+    "vuln-lab/Cross-site scripting (XSS)/Cross-site scripting (XSS).md",
+    "vuln-lab/Cross-site request forgery (CSRF)/img/file-20260703011545697.png",
+    "vuln-lab/Cross-site scripting (XSS)/JavaScript for XSS/JavaScript for XSS.md",
+    "vuln-lab/Cross-site scripting (XSS)/XSS Prevention/XSS Prevention.md.tmp.28120.8068e6364f5e",
+    "vuln-lab/Cross-site scripting (XSS)/XSS Prevention/XSS Prevention.md.tmp.28120.3ff2084fcb3a",
+    "vuln-lab/Cross-site scripting (XSS)/XSS Prevention/XSS Prevention.md",
+    "vuln-lab/Cross-site scripting (XSS)/XSS Prevention/XSS Prevention.md.tmp.28120.29a3b0966834",
+    "vuln-lab/Cross-site scripting (XSS)/Content Security Policy/Content Security Policy.md",
+    "vuln-lab/Cross-site scripting (XSS)/Content Security Policy/Content Security Policy.md.tmp.28120.dcf3443266cb",
+    "vuln-lab/Cross-site scripting (XSS)/XSS Payloads/XSS Payloads.md",
+    "vuln-lab/Cross-site scripting (XSS)/XSS Payloads/XSS Payloads.md.tmp.28120.8c6512791a93",
+    "vuln-lab/Cross-site scripting (XSS)/DOM and Browser/DOM and Browser.md",
+    "vuln-lab/Cross-site scripting (XSS)/DOM and Browser/DOM and Browser.md.tmp.28120.5b2b60110bb9",
+    "vuln-lab/Cross-site scripting (XSS)/JavaScript for XSS/JavaScript for XSS.md.tmp.28120.0483397edb58",
+    "vuln-lab/Cross-site scripting (XSS)/Cross-site scripting (XSS).md.tmp.28120.1c7993708bfd",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/run_all.md",
+    "vuln-lab/Cross-site scripting (XSS)/XSS Prevention",
+    "vuln-lab/Cross-site scripting (XSS)/Content Security Policy",
+    "vuln-lab/PortSwigger Web Security Academy/SQL injection.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/scripts/06_orderby.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/scripts/01_get_basic.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/notes/injection-types.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/scripts/02_post_basic.md",
+    "vuln-lab/Cross-site request forgery (CSRF)/Cross-site request forgery (CSRF).md",
+    "vuln-lab/Cross-site request forgery (CSRF)/未命名.md",
+    "Claude code安装/Claude Code 安装记录.md",
     "Tools/regex.md",
     "Tools/nmap.md",
     "Tools/git.md",
@@ -200,27 +219,8 @@
     "Tools/docker.md",
     "Tools/dirsearch.md",
     "Tools/curl.md",
-    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/run_all.md",
     "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/notes/setup-guide.md",
     "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/notes/overview.md",
-    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/notes/injection-types.md",
-    "vuln-lab/PortSwigger Web Security Academy/SQL injection.md",
-    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/scripts/01_get_basic.md",
-    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/scripts/06_orderby.md",
-    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/scripts/07_challenges.md",
-    "Linux/Linux运维.md",
-    "kb_260618_数字取证技术_des_bgi.md",
-    "Linux/端口占用与进程管理.md",
-    "数据库/数据库对比.md",
-    "数据库/PostgreSQL.md",
-    "数据库/MySQL.md",
-    "数据库/PostgreSQL.md.tmp.24624.84c5adfe247b",
-    "数据库/Oracle.md.tmp.24624.0c0880de9cb8",
-    "vuln-lab/PortSwigger Web Security Academy/SQL injection.md.tmp.24624.e79c1dd90c06",
-    "数据库/数据库对比.md.tmp.24624.b7e6548fe28b",
-    "数据库/Microsoft SQL Server.md.tmp.24624.4d2b5356417d",
-    "数据库/Oracle.md.tmp.24624.a916ca29ff74",
-    "数据库/PostgreSQL.md.tmp.24624.9f35598bfdd6",
     "Tools/sqlmap.png",
     "图片/ASCLL.png",
     "图片/TCPIP协议.png",
@@ -229,7 +229,6 @@
     "图片/图片字节标识.png",
     "图片/进制标识符.png",
     "图片/常见的端口_协议.png",
-    "Linux/img/file-20260402001110872.png",
-    "img/file-20260610145829598.png"
+    "Linux/img/file-20260402001110872.png"
   ]
 }
