@@ -1,6 +1,6 @@
 # JavaScript for XSS
 
-> **参考：** [XSS 主文档](../Cross-site%20scripting%20(XSS).md) | [XSS Payloads](../XSS%20Payloads/XSS%20Payloads.md) | [DOM and Browser](../DOM%20and%20Browser/DOM%20and%20Browser.md)
+> **参考：** [XSS 主文档](../Cross-site%20scripting%20(XSS).md) | [XSS Payloads](../XSS%20Payloads/XSS%20Payloads.md) | [DOM and Browser](../DOM%20and%20Browser/DOM%20and%20Browser.md) | [JavaScript 阅读基础](JavaScript%20阅读基础.md)
 
 ---
 
