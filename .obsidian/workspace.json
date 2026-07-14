@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "f194308727a80985",
+        "id": "fe30e1d1df85d116",
         "type": "tabs",
         "children": [
           {
-            "id": "7512aade1639eb6f",
+            "id": "815d05b7b0be516a",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/PortSwigger XSS Cheat Sheet 完整版.md",
-                "mode": "preview",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "PortSwigger XSS Cheat Sheet 完整版"
+              "title": "新标签页"
             }
           }
         ]
@@ -156,13 +152,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/PortSwigger XSS Cheat Sheet 完整版.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "PortSwigger XSS Cheat Sheet 完整版 的大纲"
+              "title": "大纲"
             }
           }
         ],
@@ -183,44 +178,43 @@
       "bases:新建数据库": false
     }
   },
-  "active": "7512aade1639eb6f",
+  "active": "815d05b7b0be516a",
   "lastOpenFiles": [
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_fix_remaining3.py",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_fix_remaining3.py.tmp.14664.44647e2d2d50",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_fix_remaining.py",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_fix_remaining.py.tmp.14664.4d5c39d749e5",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_translate_headings.py.tmp.14664.e7591796a452",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_translate_headings.py",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_translate_headings.py.tmp.14664.255b97a297f6",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/XSS Payloads.md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/PortSwigger XSS Cheat Sheet 完整版.md.tmp.14664.345b8acd4316",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/PortSwigger XSS Cheat Sheet 完整版.md.tmp.14664.8d43ceec3138",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_build_cheatsheet.py",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/_build_cheatsheet.py.tmp.13916.b1a60e45246d",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/XSS Payloads/PortSwigger XSS Cheat Sheet 完整版.md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/字典.md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/Cross-site scripting (XSS).md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/JavaScript for XSS/JavaScript 内置对象速查.md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/JavaScript for XSS/JavaScript for XSS.md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/JavaScript for XSS/JavaScript 阅读基础.md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/DOM and Browser/DOM and Browser.md",
+    "vuln-lab/Methodology/国内高校SRC信息收集与测试方法论.md",
+    "Linux/Linux 包管理器.md",
+    "Linux/proxychain代理以及其它代理方式.md",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.942756c2ca1d",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.06c4525496ca",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.33fb034dbef8",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.8a06c079f0b2",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.82abba6612d7",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.a14833e8fe38",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.6e462a6f3c87",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.677371a863d8",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.951541948f79",
+    "Linux/Linux文本处理命令.md",
+    "Linux/Linux服务管理.md",
+    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.d4a171602708",
+    "Linux/Linux-Docker.md",
+    "Tools/信息收集/httpx.md",
+    "Tools/信息收集/subfinder.md",
+    "Tools/信息收集/dnsx.md",
+    "Tools/信息收集/fofa.md",
+    "Tools/信息收集/dirsearch.md",
+    "Tools/regex.md",
+    "Tools/信息收集/搜索引擎语法.md",
     "vuln-lab/PHP Deserialization/PHP Deserialization.md",
-    "vuln-lab/XML External Entity (XXE)/XML External Entity (XXE).md",
-    "vuln-lab/Server-Side Template Injection (SSTI)/Server-Side Template Injection (SSTI).md",
-    "vuln-lab/XXE/橙子科技练习平台.md",
-    "vuln-lab/XXE/实体.md",
-    "vuln-lab/XXE/XXE探测.md",
-    "vuln-lab/XXE/XML外部实体注入.md",
-    "vuln-lab/XXE/XML.md",
-    "vuln-lab/XXE/Xinclude.md",
-    "vuln-lab/XXE/SVG 矢量图.md",
-    "vuln-lab/XXE/php_xxe.md",
-    "vuln-lab/XXE/expect协议.md",
-    "vuln-lab/XXE/DTD.md",
-    "vuln-lab/反序列化/字符串逃逸.md",
-    "vuln-lab/反序列化/session 反序列化.md",
-    "vuln-lab/反序列化/php反序列化及pop链构造.md",
-    "vuln-lab/反序列化/phar直接修改配置运行.md",
+    "vuln-lab/实战记录/2026-07-14-成都文理学院.md",
+    "docs/superpowers/plans/cdcas_edu_cn_资产清单_阶段A.md",
+    "docs/superpowers/plans/资产清单.md",
+    "docs/superpowers/plans/2026-07-13-第一次高校SRC信息收集.md",
+    "Linux/Bash Shell.md",
+    "Linux/kali linux终端使用.md",
+    "Linux/rsyslog与SSH服务.md",
+    "Linux/SCP文件传输.md",
+    "Linux/SELinux.md",
+    "Linux/权限管理.md",
+    "Linux/kali linux系统.md",
     "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/more.png",
     "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/less.png",
     "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/console.png",

@@ -67,6 +67,9 @@
 <marquee onstart=alert(1)>
 ```
 
+```
+<svg><animatetransform onbegin=alert(1)>
+```
 ### 无交互触发的事件 Payloads
 
 这些 payload 无需用户点击或悬停即可自动触发：
