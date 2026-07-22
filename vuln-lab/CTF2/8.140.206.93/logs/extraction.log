@@ -1,0 +1,20 @@
+[*] Finding file length...
+  >= 250: 0
+  >= 125: 0
+  >= 62: 0
+  >= 31: 0
+  >= 15: 0
+  >= 7: 0
+  >= 3: 1
+  >= 5: 0
+  >= 4: 1
+[+] File length: 4
+
+[*] Extracting flag content...
+  [1/4] '1' (ASCII 49) => 1
+  [2/4] '2' (ASCII 50) => 12
+  [3/4] '3' (ASCII 51) => 123
+  [4/4] ' ' (ASCII 32) => 123 
+
+[+] FLAG: 123 
+[+] Flag saved to flags/extracted-flag.txt

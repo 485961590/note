@@ -102,13 +102,13 @@ sqlmap --random-agent --batch --dbs -u "http://target.com/page.php?id=1"
 
 ### 系统访问
 
-| 选项 | 说明 |
-|------|------|
-| `--os-shell` | 获取系统 shell |
-| `--os-cmd=CMD` | 执行系统命令 |
-| `--file-read=FILE` | 读取服务器文件 |
-| `--file-write=FILE` | 写入文件到服务器 |
-| `--file-dest=FILE` | 写入目标路径 |
+| 选项                  | 说明         |
+| ------------------- | ---------- |
+| `--os-shell`        | 获取系统 shell |
+| `--os-cmd=CMD`      | 执行系统命令     |
+| `--file-read=FILE`  | 读取服务器文件    |
+| `--file-write=FILE` | 写入文件到服务器   |
+| `--file-dest=FILE`  | 写入目标路径     |
 
 ### 会话与输出
 

@@ -1,0 +1,5 @@
+robots.txt: HTTP 404
+sitemap.xml: HTTP 404
+.git/config: HTTP 200
+.env: HTTP 404
+.htaccess: HTTP 403

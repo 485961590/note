@@ -208,27 +208,6 @@ Windows 内置 scp 用的是 OpenSSH 格式密钥，pscp 用的是 PuTTY 的 .pp
 puttygen mykey.ppk -O private-openssh -o id_rsa
 ```
 
-### 方式三：WinSCP（图形界面）
-
-WinSCP 是 Windows 下最流行的 SFTP/SCP 图形客户端。适合不常敲命令行、需要拖拽传文件的场景。
-
-```
-1. 官网下载: https://winscp.net/
-2. 新建会话 → 填 IP、端口、用户名、密码（或密钥）
-3. 左半边是本地文件，右半边是远程文件
-4. 拖拽或 F5 复制即可
-```
-
-WinSCP 也带命令行工具（安装后 `winscp.com` 在安装目录下）：
-
-```cmd
-:: WinSCP 命令行上传
-winscp.com /command "open sftp://user:pass@192.168.1.100/" "put D:\file.txt /tmp/" "exit"
-
-:: 同步整个目录
-winscp.com /command "open sftp://user:pass@192.168.1.100/" "synchronize remote D:\local\dir /remote/dir" "exit"
-```
-
 ### 方式四：WSL 中的 scp
 
 如果已经装了 WSL，直接在 WSL 终端里用 Linux 原生的 scp，可以访问 Windows 文件系统：
@@ -294,6 +273,27 @@ scp large_file.iso.part_* user@192.168.1.100:/tmp/
 
 # 在目标机器上合并
 ssh user@192.168.1.100 "cat /tmp/large_file.iso.part_* > /home/user/large_file.iso"
+```
+
+### 方式三：WinSCP（图形界面）
+
+WinSCP 是 Windows 下最流行的 SFTP/SCP 图形客户端。适合不常敲命令行、需要拖拽传文件的场景。
+
+```
+1. 官网下载: https://winscp.net/
+2. 新建会话 → 填 IP、端口、用户名、密码（或密钥）
+3. 左半边是本地文件，右半边是远程文件
+4. 拖拽或 F5 复制即可
+```
+
+WinSCP 也带命令行工具（安装后 `winscp.com` 在安装目录下）：
+
+```cmd
+:: WinSCP 命令行上传
+winscp.com /command "open sftp://user:pass@192.168.1.100/" "put D:\file.txt /tmp/" "exit"
+
+:: 同步整个目录
+winscp.com /command "open sftp://user:pass@192.168.1.100/" "synchronize remote D:\local\dir /remote/dir" "exit"
 ```
 
 ### 场景3：无密码传输（密钥认证）

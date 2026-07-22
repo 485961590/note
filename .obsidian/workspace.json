@@ -4,20 +4,51 @@
     "type": "split",
     "children": [
       {
-        "id": "fe30e1d1df85d116",
+        "id": "79338f349f767193",
         "type": "tabs",
         "children": [
           {
-            "id": "815d05b7b0be516a",
+            "id": "6ad83e9932db95ba",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "vuln-lab/PortSwigger Web Security Academy/DOM-based vulnerabilities/DOM-based漏洞完整笔记.md",
+                "mode": "preview",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "新标签页"
+              "title": "DOM-based漏洞完整笔记"
+            }
+          },
+          {
+            "id": "e3e19b5b481e7944",
+            "type": "leaf",
+            "state": {
+              "type": "pdf",
+              "state": {
+                "file": "资料书籍/sqlmap中文手册.pdf"
+              },
+              "icon": "lucide-file-text",
+              "title": "sqlmap中文手册"
+            }
+          },
+          {
+            "id": "d9d094aae683d2ff",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/宽字节注入.md",
+                "mode": "preview",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "宽字节注入"
             }
           }
-        ]
+        ],
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -152,12 +183,13 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/宽字节注入.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "大纲"
+              "title": "宽字节注入 的大纲"
             }
           }
         ],
@@ -178,52 +210,52 @@
       "bases:新建数据库": false
     }
   },
-  "active": "815d05b7b0be516a",
+  "active": "d9d094aae683d2ff",
   "lastOpenFiles": [
-    "vuln-lab/Methodology/国内高校SRC信息收集与测试方法论.md",
-    "Linux/Linux 包管理器.md",
-    "Linux/proxychain代理以及其它代理方式.md",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.942756c2ca1d",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.06c4525496ca",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.33fb034dbef8",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.8a06c079f0b2",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.82abba6612d7",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.a14833e8fe38",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.6e462a6f3c87",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.677371a863d8",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.951541948f79",
-    "Linux/Linux文本处理命令.md",
-    "Linux/Linux服务管理.md",
-    "Linux/proxychain代理以及其它代理方式.md.tmp.25944.d4a171602708",
-    "Linux/Linux-Docker.md",
-    "Tools/信息收集/httpx.md",
-    "Tools/信息收集/subfinder.md",
-    "Tools/信息收集/dnsx.md",
-    "Tools/信息收集/fofa.md",
+    "Tools/sqlmap.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/绕过技术总览.md.tmp.23940.59157cfdcbeb",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/HTTP参数污染绕过.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/HTTP参数污染绕过.md.tmp.23940.439ca9be7b19",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/宽字节注入.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/基础过WAF.pdf",
+    "资料书籍/sqlmap中文手册.pdf",
+    "vuln-lab/PortSwigger Web Security Academy/DOM-based vulnerabilities/DOM-based漏洞完整笔记.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/handler绕过.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/0d95d6c515937131dd78195eb0c2737b.par.temp",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/绕过技术总览.md.tmp.23940.dfcdf12156ce",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/绕过技术总览.md.tmp.23940.f01e0d0800da",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/绕过技术总览.md.tmp.23940.f5d91709ab2f",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/绕过技术总览.md.tmp.23940.edf4148b8915",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/HTTP协议层绕过.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/Union检测绕过.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/SQL injection.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/绕过技术总览.md.tmp.23940.16bad7e4399a",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/双写绕过.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/绕过技术总览.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/SQL injection payloads.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/特殊表-函数-配置项.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/重命名绕过.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/sql-injection-keywords-reference.md",
+    "vuln-lab/OWASP-Top-10.md",
     "Tools/信息收集/dirsearch.md",
     "Tools/regex.md",
-    "Tools/信息收集/搜索引擎语法.md",
-    "vuln-lab/PHP Deserialization/PHP Deserialization.md",
-    "vuln-lab/实战记录/2026-07-14-成都文理学院.md",
-    "docs/superpowers/plans/cdcas_edu_cn_资产清单_阶段A.md",
-    "docs/superpowers/plans/资产清单.md",
-    "docs/superpowers/plans/2026-07-13-第一次高校SRC信息收集.md",
-    "Linux/Bash Shell.md",
-    "Linux/kali linux终端使用.md",
-    "Linux/rsyslog与SSH服务.md",
-    "Linux/SCP文件传输.md",
-    "Linux/SELinux.md",
-    "Linux/权限管理.md",
-    "Linux/kali linux系统.md",
+    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/bypass-techniques/语法变体与函数替代绕过.md",
+    "数据库/SQL语句示例/JOIN.md",
+    "数据库/SQL语句示例/DELETE.md",
+    "数据库/SQL语句示例/DDL.md",
+    "数据库/SQL语句示例/事务.md",
+    "数据库/SQL语句示例/UPDATE.md",
+    "数据库/SQL语句示例/SET.md",
+    "数据库/SQL语句示例/SELECT.md",
+    "图片/php伪协议.png",
+    "图片/TCPIP协议.png",
+    "图片/图片字节标识.png",
+    "图片/网络传输架构.png",
+    "图片/ASCLL.png",
+    "图片/常见的端口_协议.png",
+    "图片/进制标识符.png",
     "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/more.png",
     "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/less.png",
-    "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/console.png",
-    "SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/more.png",
-    "SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/less.png",
-    "SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/console.png",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site request forgery (CSRF)/img/file-20260703011545697.png",
-    "vuln-lab/Cross-site request forgery (CSRF)/img/file-20260703011545697.png",
-    "Tools/sqlmap.png",
-    "图片/ASCLL.png"
+    "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/console.png"
   ]
 }

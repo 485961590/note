@@ -55,12 +55,12 @@ CORS (Cross-Origin Resource Sharing) 就是为了解决这个问题而设计的�
 
 **CORS 的工作方式：** 浏览器和服务器通过一套 HTTP 响应头来"协商"跨域访问权限。服务器在响应中声明："我信任来自源 X 的请求"，浏览器检查当前页面是否匹配声明，匹配则允许 JavaScript 读取响应内容。关键的头部包括：
 
-| 响应头 | 作用 |
-|---|---|
-| `Access-Control-Allow-Origin` | 指定允许哪个源访问响应（最重要） |
+| 响应头                                | 作用                 |
+| ---------------------------------- | ------------------ |
+| `Access-Control-Allow-Origin`      | 指定允许哪个源访问响应（最重要）   |
 | `Access-Control-Allow-Credentials` | 是否允许携带 Cookie/认证信息 |
-| `Access-Control-Allow-Methods` | 允许的 HTTP 方法（预检时使用） |
-| `Access-Control-Allow-Headers` | 允许的自定义请求头（预检时使用） |
+| `Access-Control-Allow-Methods`     | 允许的 HTTP 方法（预检时使用） |
+| `Access-Control-Allow-Headers`     | 允许的自定义请求头（预检时使用）   |
 
 > **关键理解：** CORS 的所有安全判断都在**服务器响应头**中声明，由**浏览器**强制执行。如果服务器配置出错（比如允许了不该允许的源），浏览器就会照做，漏洞由此产生。
 
