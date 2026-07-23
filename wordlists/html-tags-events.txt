@@ -1,5 +1,3 @@
-**All tags**
-```txt
 a
 abbr
 acronym
@@ -143,10 +141,6 @@ video
 wbr
 xmp
 xss
-```
-
-**All events**
-```txt
 onafterprint
 onanimationcancel
 onanimationend
@@ -171,7 +165,6 @@ onclick
 onclose
 oncommand
 oncontentvisibilityautostatechange
-oncontentvisibilityautostatechange(hidden)
 oncontextmenu
 oncopy
 oncuechange
@@ -190,7 +183,6 @@ onend
 onended
 onerror
 onfocus
-onfocus(autofocus)
 onfocusin
 onfocusout
 onformdata
@@ -262,7 +254,6 @@ onsubmit
 onsuspend
 ontimeupdate
 ontoggle
-ontoggle(popover)
 ontouchcancel
 ontouchend
 ontouchmove
@@ -276,7 +267,6 @@ onunload
 onvalidationstatuschange
 onvolumechange
 onwaiting
-onwaiting(loop)
 onwebkitanimationend
 onwebkitanimationiteration
 onwebkitanimationstart
@@ -291,11 +281,6 @@ onwebkitpresentationmodechanged
 onwebkittransitionend
 onwebkitwillrevealbottom
 onwheel
-```
-
-**All browsers**
-```txt
 Chrome
 Firefox
 Safari
-```
