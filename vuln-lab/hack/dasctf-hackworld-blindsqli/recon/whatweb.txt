@@ -1,0 +1,4 @@
+WhatWeb report for https://64413b275c657c39ad0bb422.http-ctf2.dasctf.com/
+Status    : 200 OK
+Title     : Hack World
+IP        : 117.21.200.176

@@ -1,13 +1,3 @@
-# ==============================================
-# 敏感文件 / 历史遗留文件字典
-# Sensitive & Historical Files Wordlist
-# ==============================================
-# 用于发现各类操作系统中可能泄露敏感信息的遗留文件
-# For discovering leftover files that may leak sensitive info across OSes
-# ==============================================
-
-# ---- Shell 历史记录 / Shell History ----
-
 .bash_history
 .bash_history.bak
 .zsh_history
@@ -19,9 +9,6 @@
 .fish_history
 .z
 .zsh_sessions
-
-# ---- 各类 REPL / CLI 工具历史 ----
-
 .mysql_history
 .psql_history
 .python_history
@@ -45,9 +32,6 @@
 .lesshst
 .ranger_history
 .most_history
-
-# ---- Shell 配置文件 (可能含密钥) / Shell Configs (may contain keys) ----
-
 .bashrc
 .bashrc.bak
 .bashrc.old
@@ -67,9 +51,6 @@
 .cshrc
 .fish.config
 .config/fish/config.fish
-
-# ---- macOS 特有文件 / macOS Specific ----
-
 .DS_Store
 ._.DS_Store
 .Spotlight-V100
@@ -87,17 +68,11 @@
 .hidden
 .file
 .VolumeIcon.icns
-
-# ---- Windows 特有文件 / Windows Specific ----
-
 Thumbs.db
 Thumbs.db:encryptable
 Desktop.ini
 ehthumbs.db
 $RECYCLE.BIN
-
-# ---- 编辑器临时文件 / Editor Temp Files ----
-
 *~
 *.swp
 *.swo
@@ -116,9 +91,6 @@ $RECYCLE.BIN
 .emacs
 .emacs.d
 .emacs~
-
-# ---- IDE / 编辑器配置 (可能含 token) / IDE Configs (may contain tokens) ----
-
 .idea/workspace.xml
 .idea/sonarlint
 .idea/.gitignore
@@ -132,9 +104,6 @@ $RECYCLE.BIN
 .classpath
 .settings/org.eclipse.core.resources.prefs
 .nbattrs
-
-# ---- 环境变量文件 / Environment / Dotenv ----
-
 .env
 .env.local
 .env.production
@@ -163,9 +132,6 @@ $RECYCLE.BIN
 .config/gcloud/legacy_credentials
 .azure/accessTokens.json
 .azure/azureProfile.json
-
-# ---- Docker / 容器 / Docker & Containers ----
-
 .docker/config.json
 .docker/ca.pem
 .docker/cert.pem
@@ -178,9 +144,6 @@ docker-compose.yml
 docker-compose.yaml
 docker-compose.override.yml
 .dockerenv
-
-# ---- Git / VCS 泄露 / Git & VCS Leaks ----
-
 .git/config
 .git/index
 .git/HEAD
@@ -207,9 +170,6 @@ docker-compose.override.yml
 .bzr/branch/branch.conf
 .bzr/branch/format
 .gitkeep
-
-# ---- 凭据文件 / Credential Files ----
-
 .git-credentials
 .git-credentials.bak
 .npmrc
@@ -233,9 +193,6 @@ docker-compose.override.yml
 .procmailrc
 .msmtprc
 .muttrc
-
-# ---- SSH 密钥 / SSH Keys ----
-
 .ssh/id_rsa
 .ssh/id_rsa.pub
 .ssh/id_rsa-cert.pub
@@ -257,9 +214,6 @@ docker-compose.override.yml
 .ssh/known_hosts.old
 .ssh/config
 .ssh/config.bak
-
-# ---- 证书与密钥文件 / Certificates & Key Files ----
-
 *.pem
 *.key
 *.crt
@@ -284,9 +238,6 @@ privkey.pem
 fullchain.pem
 chain.pem
 dhparam.pem
-
-# ---- Web 服务器配置 / Web Server Config ----
-
 .htaccess
 .htaccess.bak
 .htaccess.old
@@ -307,9 +258,6 @@ lighttpd.conf
 .htpasswd
 .htpasswd.bak
 .htgroup
-
-# ---- 应用配置文件 / Application Configs (可能含数据库密码) ----
-
 config.php
 config.php.bak
 config.php.old
@@ -374,9 +322,6 @@ secrets.yml
 secrets.yml.bak
 credentials.json
 credentials.json.bak
-
-# ---- WordPress 专属 / WordPress Specific ----
-
 wp-config.php
 wp-config.php.bak
 wp-config.php.old
@@ -395,9 +340,6 @@ wp-content/uploads/
 wp-includes/
 readme.html
 license.txt
-
-# ---- 备份文件 / Backup Files ----
-
 *.bak
 *.backup
 *.back
@@ -440,9 +382,6 @@ license.txt
 *.yaml.bak
 *.json.bak
 *.json.old
-
-# ---- 压缩包 (可能含源码或数据库) / Archives (may contain source or DB) ----
-
 *.tar
 *.tar.gz
 *.tgz
@@ -498,9 +437,6 @@ src.tar.gz
 src.zip
 deploy.tar.gz
 deploy.zip
-
-# ---- SQL 导出文件 / SQL Dumps ----
-
 *.sql
 *.sql.gz
 *.sql.zip
@@ -523,9 +459,6 @@ structure.sql
 schema.sql
 migration.sql
 seed.sql
-
-# ---- 数据库文件 / Database Files ----
-
 *.sqlite
 *.sqlite3
 *.sqlite2
@@ -548,9 +481,6 @@ seed.sql
 *.dat
 *.wal
 *.shm
-
-# ---- 日志文件 (可能含敏感信息) / Log Files (may leak sensitive info) ----
-
 access.log
 access_log
 error.log
@@ -595,9 +525,6 @@ app/logs/
 logs/production.log
 logs/development.log
 logs/staging.log
-
-# ---- CI / CD 配置文件 / CI/CD Config Files ----
-
 .travis.yml
 .travis.yaml
 .gitlab-ci.yml
@@ -622,9 +549,6 @@ Jenkinsfile
 .semaphore/semaphore.yml
 azure-pipelines.yml
 buddy.yml
-
-# ---- 包管理配置文件 (可能含 token) / Package Manager Configs ----
-
 package.json
 package-lock.json
 yarn.lock
@@ -674,9 +598,6 @@ configure.ac
 .tool-versions
 .terraformrc
 .terraform-version
-
-# ---- Kubernetes / 容器编排 / K8s & Orchestration ----
-
 kubeconfig
 .kube/config
 .kube/config.bak
@@ -690,9 +611,6 @@ configmap.yaml
 deployment.yaml
 service.yaml
 ingress.yaml
-
-# ---- 系统关键文件 / System Critical Files ----
-
 /etc/passwd
 /etc/shadow
 /etc/shadow-
@@ -745,9 +663,6 @@ ingress.yaml
 /proc/self/net/udp
 /proc/cpuinfo
 /proc/meminfo
-
-# ---- Windows 系统文件 & 注册表 / Windows System & Registry ----
-
 C:/Windows/win.ini
 C:/Windows/system.ini
 C:/Windows/System32/drivers/etc/hosts
@@ -769,16 +684,10 @@ C:/WINDOWS/sysprep.inf
 C:/WINDOWS/sysprep.xml
 C:/Unattend.xml
 C:/Unattend.txt
-
-# ---- Team Foundation Server / TFS ----
-
 .tfignore
 .tf/
 .tfs/
 .vs/config/applicationhost.config
-
-# ---- 各种 token/凭据文件 (命名约定) / Various Token Files ----
-
 token.txt
 token.json
 token.yaml
@@ -813,9 +722,6 @@ config/master.key
 config/credentials/production.key
 config/credentials/development.key
 config/database.yml
-
-# ---- 其他常见文件 / Other Common Files ----
-
 CHANGELOG.md
 CHANGELOG.txt
 CHANGES.txt
@@ -890,9 +796,6 @@ jsconfig.json
 .nycrc
 .jshintrc
 .jscsrc
-
-# ---- 已知的后门/Webshell 常用文件名 (Honeypot / Defense) ----
-
 cmd.php
 cmd.aspx
 cmd.jsp
@@ -948,9 +851,6 @@ help.php
 api.php
 ajax.php
 v.php
-
-# ---- 敏感路径/目录 (Path Traversal) ----
-
 /etc/passwd
 /etc/shadow
 /etc/hosts

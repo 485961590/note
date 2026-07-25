@@ -2,6 +2,67 @@
 
 > 案例来源：PortSwigger Web Security Academy — "DOM XSS using web messages"
 
+## 审计源码
+
+### 漏洞代码 1：postMessage → innerHTML
+
+```javascript
+window.addEventListener('message', function(e) {
+    document.getElementById('ads').innerHTML = e.data;
+})
+```
+
+### 漏洞代码 2：WebSocket → innerHTML
+
+```javascript
+// labHeader.js
+completedListeners = [];
+
+(function () {
+    let labHeaderWebSocket = undefined;
+    function openWebSocket() {
+        return new Promise(res => {
+            if (labHeaderWebSocket) {
+                res(labHeaderWebSocket);
+                return;
+            }
+
+            let newWebSocket = new WebSocket(
+                location.origin.replace("http", "ws") + "/academyLabHeader"
+            );
+
+            newWebSocket.onopen = function (evt) {
+                res(newWebSocket);
+            };
+
+            newWebSocket.onmessage = function (evt) {
+                const labSolved =
+                    document.getElementById('notification-labsolved');
+                const keepAliveMsg = evt.data === 'PONG';
+                if (labSolved || keepAliveMsg) {
+                    return;
+                }
+                document.getElementById("academyLabHeader")
+                    .innerHTML = evt.data;
+                animateLabHeader();
+
+                for (const listener of completedListeners) {
+                    listener();
+                }
+            };
+
+            setInterval(() => {
+                newWebSocket.send("PING");
+            }, 5000)
+        });
+    }
+
+    labHeaderWebSocket = openWebSocket();
+})();
+```
+
+---
+
 ## 漏洞等级：高危（无需用户交互，任意域触发）
 
 ---
@@ -118,39 +179,14 @@ element.innerHTML = '<img src=x onerror=alert(1)>';
 
 ### 1.5 攻击链
 
-```
-┌─────────────────────────────────────────────────┐
-│ attacker.com（攻击者控制的页面）                   │
-│                                                  │
-│  <iframe                                          │
-│    src="https://victim.com"                       │
-│    onload="this.contentWindow.postMessage(        │
-│      '<img src=x onerror=print()>',              │
-│      '*'                                         │
-│    )"                                            │
-│  ></iframe>                                      │
-│                                                  │
-│  1. iframe 加载 victim.com                       │
-│  2. victim.com 注册 message 事件监听器             │
-│  3. iframe onload 触发                           │
-│  4. postMessage 发送恶意 HTML                     │
-└────────────┬────────────────────────────────────┘
-             │
-             ▼
-┌────────────────────────────────────────────────┐
-│ victim.com（目标页面内）                          │
-│                                                 │
-│ addEventListener('message', function(e) {       │
-│     document.getElementById('ads')              │
-│       .innerHTML = e.data;                      │
-│     // e.data = '<img src=x onerror=print()>'   │
-│ })                                              │
-│                                                 │
-│ → 浏览器创建 <img> 元素                          │
-│ → 尝试加载 src=x（失败）                         │
-│ → 触发 onerror → print() 执行                   │
-└────────────────────────────────────────────────┘
-```
+1. 攻击者在 `attacker.com` 页面中嵌入指向 `victim.com` 的 iframe
+2. iframe 加载完成后，通过 `postMessage` 发送恶意 HTML payload：
+   ```javascript
+   targetWindow.postMessage('<img src=x onerror=print()>', '*')
+   ```
+3. victim.com 的 message 监听器收到消息
+4. `innerHTML = e.data` 将 `<img src=x onerror=print()>` 写入 DOM
+5. 浏览器解析 HTML，尝试加载 `src=x`（失败），触发 `onerror` → `print()` 执行
 
 **关键知识点**：`iframe.contentWindow` 即使跨域也可以访问——这是浏览器专门为 `postMessage` 设计的。这是唯一允许跨域访问的窗口属性。`iframe.contentDocument` 跨域时则会被同源策略阻止。
 

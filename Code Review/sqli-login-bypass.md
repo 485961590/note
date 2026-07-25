@@ -1,5 +1,42 @@
 # SQL 注入登录绕过 — 逐行安全审计
 
+## 审计源码
+
+```php
+<?php
+// login.php — 存在SQL注入的登录验证代码
+$name = $_POST['username'];
+$password = $_POST['password'];
+$sql = "SELECT * FROM user WHERE username = '$name'";
+$result = mysql_query($con, $sql);
+
+if(preg_match("/\/(\)\|\=\|or/", $name)){
+    die("do not hack me!");
+}
+
+if (!$result) {
+    printf("Error: %s\n", mysql_error($con));
+    exit();
+}
+
+$arr = mysql_fetch_row($result);
+if($arr[1] == "admin") {
+    if(md5($password) == $arr[2]){
+        echo $flag;
+    } else{
+        die("wrong pass!");
+    }
+}
+else{
+    die("wrong user!");
+}
+?>
+```
+
+> 注：以上源码根据审计报告中的逐行分析重构，行号可能与原始文件略有出入。
+
+---
+
 ## 漏洞等级：高危（可直接获取 Flag）
 
 ---

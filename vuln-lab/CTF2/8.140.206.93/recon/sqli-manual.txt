@@ -1,3 +1,0 @@
-select * from article where id= ('1')</font>
-select * from article where id= ('1'')</font>
-select * from article where id= ('1')--')</font>

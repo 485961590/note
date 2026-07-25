@@ -1,5 +1,60 @@
 # write_do.php 二次 SQL 注入 + 宽字节注入 — 逐行安全审计
 
+## 审计源码
+
+```php
+<?php
+include "mysql.php";
+session_start();
+if($_SESSION['login'] != 'yes'){
+    header("Location: ./login.php");
+    die();
+}
+
+if(isset($_GET['do'])){
+    switch ($_GET['do'])
+    {
+    case 'write':
+        $category = addslashes($_POST['category']);
+        $title = addslashes($_POST['title']);
+        $content = addslashes($_POST['content']);
+        $sql = "insert into board
+                set category = '$category',
+                    title = '$title',
+                    content = '$content'";
+        $result = mysql_query($sql);
+        header("Location: ./index.php");
+        break;
+
+    case 'comment':
+        $bo_id = addslashes($_POST['bo_id']);
+        $sql = "select category from board where id='$bo_id'";
+        $result = mysql_query($sql);
+        $num = mysql_num_rows($result);
+        if($num>0){
+            $category = mysql_fetch_array($result)['category'];
+            $content = addslashes($_POST['content']);
+            $sql = "insert into comment
+                    set category = '$category',
+                        content = '$content',
+                        bo_id = '$bo_id'";
+            $result = mysql_query($sql);
+        }
+        header("Location: ./comment.php?id=$bo_id");
+        break;
+
+    default:
+        header("Location: ./index.php");
+        break;
+    }
+}
+?>
+```
+
+> 注：以上源码根据审计报告中的逐行分析重构，行号可能与原始文件略有出入。
+
+---
+
 ## 漏洞等级：高危（可读取服务器任意文件、获取 Flag）
 
 ---

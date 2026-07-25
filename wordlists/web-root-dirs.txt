@@ -1,4 +1,3 @@
-# Linux - Apache/Nginx 默认
 /var/www/html
 /var/www
 /var/www/html/public
@@ -21,13 +20,9 @@
 /opt/bitnami/apache2/htdocs
 /opt/bitnami/nginx/html
 /etc/nginx/html
-
-# Linux - 宝塔面板
 /www/wwwroot
 /www/server/phpmyadmin
 /www/server/php
-
-# Linux - 常见子目录
 /var/www/html/admin
 /var/www/html/upload
 /var/www/html/uploads
@@ -45,15 +40,11 @@
 /var/www/html/config
 /var/www/html/conf
 /var/www/html/data
-
-# Windows - IIS
 C:/inetpub/wwwroot
 C:/inetpub
 C:/inetpub/wwwroot/admin
 D:/inetpub/wwwroot
 E:/inetpub/wwwroot
-
-# Windows - XAMPP
 C:/xampp/htdocs
 C:/xampp/htdocs/admin
 C:/xampp/htdocs/upload
@@ -61,39 +52,27 @@ D:/xampp/htdocs
 E:/xampp/htdocs
 C:/xampp/tomcat/webapps
 C:/xampp/phpMyAdmin
-
-# Windows - WampServer
 C:/wamp/www
 C:/wamp/www/admin
 C:/wamp64/www
 D:/wamp/www
 D:/wamp64/www
-
-# Windows - phpStudy
 C:/phpstudy_pro/WWW
 C:/phpstudy_pro/WWW/admin
 C:/phpstudy/WWW
 C:/phpStudy/WWW
 D:/phpstudy_pro/WWW
 D:/phpstudy/WWW
-
-# Windows - 宝塔面板
 C:/wwwroot
 D:/wwwroot
 C:/BtSoft/phpmyadmin
-
-# Windows - UPUPW / Nginx
 C:/UPUPW/vhosts
 C:/UPUPW/htdocs
 C:/wnmp/html
 C:/wnmp/htdocs
-
-# Windows - Tomcat
 C:/Program Files/Apache Software Foundation/Tomcat/webapps
 C:/apache-tomcat/webapps
 D:/apache-tomcat/webapps
-
-# Windows - 其他常见
 C:/web
 C:/web/www
 C:/web/html
@@ -104,8 +83,6 @@ D:/www
 D:/html
 C:/AppServ/www
 C:/EasyPHP/www
-
-# Docker 常见挂载
 /app
 /app/public
 /app/html
@@ -113,8 +90,6 @@ C:/EasyPHP/www
 /var/www
 /data
 /opt/app
-
-# 其他常见
 /var/www/html/wordpress
 /var/www/html/wp-content
 /var/www/html/dedecms
@@ -122,131 +97,75 @@ C:/EasyPHP/www
 /var/www/html/phpcms
 /var/www/html/ecshop
 /usr/share/nginx/html/wordpress
-
-# macOS - 系统默认 Apache
 /Library/WebServer/Documents
 /System/Library/WebServer/Documents
-
-# macOS - Homebrew (Apple Silicon)
 /opt/homebrew/var/www
 /opt/homebrew/opt/nginx/html
 /opt/homebrew/opt/httpd/htdocs
 /opt/homebrew/etc/nginx/html
-
-# macOS - Homebrew (Intel)
 /usr/local/var/www
 /usr/local/opt/nginx/html
 /usr/local/opt/httpd/htdocs
 /usr/local/etc/nginx/html
-
-# macOS - 集成环境
 /Applications/XAMPP/htdocs
 /Applications/MAMP/htdocs
 /Applications/MAMP/Library
 /Applications/XAMPP/xamppfiles/htdocs
-
-# macOS - 用户站点 (~username/Sites)
 /Users/*/Sites
-
-# FreeBSD
 /usr/local/www
 /usr/local/www/nginx
 /usr/local/www/nginx-dist
 /usr/local/www/apache24/data
 /usr/local/www/apache22/data
 /usr/local/etc/nginx/html
-
-# OpenBSD
 /var/www/htdocs
 /var/www/html
-
-# NetBSD
 /usr/pkg/share/httpd/htdocs
-
-# Solaris / illumos
 /var/apache2/2.4/htdocs
 /var/apache2/2.2/htdocs
 /var/nginx/html
 /opt/apache/htdocs
 /opt/csw/apache2/share/htdocs
-
-# cPanel (Linux)
 /home/*/public_html
 /home/*/public_ftp
 /home/*/www
-
-# DirectAdmin
 /home/*/domains/*/public_html
 /home/*/domains/*/private_html
-
-# Plesk
 /var/www/vhosts/*/httpdocs
 /var/www/vhosts/*/httpsdocs
 /var/www/vhosts/default/htdocs
-
-# CyberPanel
 /home/*/public_html
 /usr/local/lscp
-
-# ISPConfig
 /var/www/clients/client*/web*/web
 /var/www/*/web
-
-# CentOS Web Panel (CWP)
 /usr/local/apache/htdocs
 /usr/local/cwpsrv/htdocs
 /home/*/public_html
-
-# VestaCP
 /home/*/web/*/public_html
 /home/admin/web/*/public_html
-
-# aaPanel (国际版宝塔)
 /www/wwwroot
 /www/server/phpmyadmin
-
-# Froxlor
 /var/customers/webs/*/
-
-# Virtualmin / Webmin
 /home/*/public_html
 /home/*/domains/*/public_html
-
-# HestiaCP
 /home/*/web/*/public_html
-
-# CloudLinux
 /home/*/public_html
-
-# Tomcat (通用)
 /usr/local/tomcat/webapps
 /usr/share/tomcat/webapps
 /opt/tomcat/webapps
 /var/lib/tomcat/webapps
 /var/lib/tomcat*/webapps
-
-# Jetty
 /opt/jetty/webapps
 /usr/share/jetty/webapps
 /var/lib/jetty/webapps
-
-# WildFly / JBoss
 /opt/wildfly/standalone/deployments
 /usr/share/wildfly/standalone/deployments
 /opt/jboss/standalone/deployments
-
-# WebLogic (Oracle)
 /opt/oracle/weblogic/user_projects/domains/*/servers/*/stage
 /opt/wls/user_projects/domains/*/servers/*/stage
-
-# WebSphere (IBM)
 /opt/IBM/WebSphere/AppServer/profiles/*/installedApps
-
-# GlassFish
 /opt/glassfish/domains/*/docroot
 /usr/share/glassfish/domains/*/docroot
-
-# Node.js / Python / 应用目录
 /opt/app
 /opt/app/public
 /opt/app/static
@@ -254,41 +173,21 @@ C:/EasyPHP/www
 /srv/app/public
 /var/www/app
 /var/www/app/public
-
-# GitBook / 文档站点
 /usr/share/doc
 /var/www/docs
-
-# Jenkins
 /var/lib/jenkins/workspace
 /var/lib/jenkins/userContent
 /opt/jenkins/userContent
-
-# Laragon (Windows)
 C:/laragon/www
 C:/laragon/etc/nginx/html
 D:/laragon/www
-
-# Ampps (Windows / macOS)
 C:/Program Files (x86)/Ampps/www
 C:/Ampps/www
-
-# WPN-XM (Windows)
 C:/server/www
-
-# UniServerZ (Windows)
 C:/UniServerZ/www
-
-# USBWebserver (Windows)
 C:/USBWebserver/root
-
-# VertrigoServ (Windows)
 C:/VertrigoServ/www
-
-# Devilbox (Docker)
 /var/www/default/htdocs
-
-# 云平台常见路径 (AWS/Azure/GCP/阿里云)
 /home/ubuntu
 /home/ec2-user
 /home/admin

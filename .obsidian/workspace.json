@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "683a40ca28a1d413",
+        "id": "078e0fa458844ed4",
         "type": "tabs",
         "children": [
           {
-            "id": "f78f725652904000",
+            "id": "f7e7000f74632306",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/Cross-site scripting (XSS).md",
+                "file": "vuln-lab/SQL-Injection-探测方法论.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Cross-site scripting (XSS)"
+              "title": "SQL-Injection-探测方法论"
             }
           }
         ]
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/Cross-site scripting (XSS).md",
+                "file": "Code Review/command-injection-bypass-spaces-filter.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Cross-site scripting (XSS) 的大纲"
+              "title": "command-injection-bypass-spaces-filter 的大纲"
             }
           }
         ],
@@ -170,7 +170,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 200,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -183,44 +184,45 @@
       "bases:新建数据库": false
     }
   },
-  "active": "f78f725652904000",
+  "active": "f7e7000f74632306",
   "lastOpenFiles": [
-    "wordlists/html-tags-events.txt",
-    "wordlists/html-tags-events.txt.tmp.30572.03f55afa2cb8",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/字典.md",
-    "wordlists/字典.md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-site scripting (XSS)/Cross-site scripting (XSS).md",
-    "Frontend/HTML-标签与属性速查.md",
-    "Code Review/dom-xss-postmessage.md",
-    "Frontend/HTML-标签与属性速查.md.tmp.30572.c4845b5758f8",
-    "Frontend/CSS-选择器.md",
-    "Protocol/ARP.md",
-    "Protocol/TCP_UDP_HTTP_HTTPS.md",
-    "Code_languages/JavaScript.md",
-    "Code Review/sqli-login-bypass.md",
-    "Code Review/write_do.md",
-    "Code Review/dom-xss-postmessage.md.tmp.30572.bdc699e86e64",
-    "Code Review/write_do.md.tmp.30572.e33a3baf82bb",
-    "Code Review/sqli-login-bypass.md.tmp.30572.1b2d7a860153",
-    "Code Review/DOM-based-XSS-审计与利用教程.md",
-    "Code Review/write_do.php",
-    "Code Review/sqli-login-bypass.php",
-    "Code Review/DOM-based-XSS-审计与利用教程.md.tmp.30572.8d7f639cecc2",
-    "Code Review/3.txt.tmp.30572.3fe3289790b0",
-    "Code Review/2.txt.tmp.30572.cd850081095f",
-    "docs/superpowers/plans/2026-07-13-第一次高校SRC信息收集.md",
-    "docs/superpowers/plans/资产清单.md",
-    "docs/superpowers/plans/cdcas_edu_cn_资产清单_阶段A.md",
-    "vuln-lab/PortSwigger Web Security Academy/DOM-based vulnerabilities/DOM-based漏洞完整笔记.md",
-    "Tools/hash破解/hashcat与John the Ripper.md",
-    "Tools/信息收集/git-dumper.md",
+    "vuln-lab/hack/dasctf-cmdexec/recon/index-source.html",
+    "vuln-lab/hack/dasctf-cmdexec/recon/whatweb.txt",
+    "vuln-lab/hack/dasctf-cmdexec/flags/found-flags.txt",
+    "vuln-lab/hack/dasctf-cmdexec/recon/headers.txt",
+    "vuln-lab/hack/dasctf-cmdexec/flags/flag.txt",
+    "vuln-lab/hack/dasctf-cmdexec/exploits/cmdi-pipe.txt",
+    "vuln-lab/hack/dasctf-cmdexec/exploits/cmdi-semicolon.txt",
+    "vuln-lab/hack/dasctf-cmdexec/exploits/cmdi-normal.txt",
+    "vuln-lab/hack/dasctf-cmdexec/exploits/cmdi-and.txt",
+    "vuln-lab/hack/dasctf-cmdexec/recon",
+    "vuln-lab/hack/dasctf-cmdexec/logs",
+    "vuln-lab/hack/dasctf-cmdexec/attack-report.md",
+    "vuln-lab/hack/cisppte-lfi-phpfilter/attack-report.md",
+    "中网信安/日程/第五天-SQL盲注实战/第五天-SQL盲注实战.md",
+    "vuln-lab/SQL-Injection-探测方法论.md",
+    "vuln-lab/伪协议文件读取-信息枚举清单.md",
+    "vuln-lab/hack/dasctf-hackworld-blindsqli/attack-report.md",
+    "vuln-lab/hack/dasctf-search-blindsqli/findings.md",
+    "vuln-lab/hack/dasctf-search-blindsqli/attack-report.md",
+    "vuln-lab/hack/dasctf-login-union-sqli/attack-report.md",
+    "vuln-lab/hack/SSTI/findings.md",
+    "vuln-lab/hack/SSTI/attack-report.md",
+    "vuln-lab/hack/数字型注入/attack-report.md",
+    "vuln-lab/hack/dasctf-2/attack-report.md",
+    "vuln-lab/hack/dasctf-3/attack-report.md",
+    "vuln-lab/hack/8.140.206.93/findings.md",
+    "vuln-lab/hack/8.140.206.93/attack-report.md",
+    "vuln-lab/CTF2/SSTI/findings.md",
+    "vuln-lab/CTF2/SSTI/attack-report.md",
+    "vuln-lab/CTF2/数字型注入/attack-report.md",
+    "vuln-lab/CTF2/64413b275c657c39ad0bb422-http-ctf2-dasctf-com/attack-report.md",
+    "中网信安/日程/第七天-文件包含/第七天-文件包含.md",
     "中网信安/日程/第六天-SQL注入高级绕过与文件操作/第六天-SQL注入高级绕过与文件操作.md",
-    "中网信安/日程/第二天-暴力破解与压缩包穷举.md",
-    "Tools/信息收集/dirsearch.md",
-    "vuln-lab/PortSwigger Web Security Academy/Cross-origin resource sharing (CORS)/Cross-origin resource sharing (CORS).md",
-    "vuln-lab/OWASP-Top-10.md",
-    "vuln-lab/PortSwigger Web Security Academy/SQL-Injection/sql-injection-keywords-reference.md",
-    "中网信安/日程/第六天-SQL注入高级绕过与文件操作/CTF实战-git泄露-二次注入-load_file拿flag.md",
+    "Code Review/tornado-web-framework-ctf-analysis.md",
+    "Code Review/command-injection-bypass-spaces-filter.md",
+    "Code Review/simple-user-system-php-audit.md",
+    "www/static/piapiapia.gif",
     "图片/php伪协议.png",
     "图片/TCPIP协议.png",
     "图片/图片字节标识.png",
@@ -229,7 +231,6 @@
     "图片/常见的端口_协议.png",
     "图片/进制标识符.png",
     "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/more.png",
-    "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/less.png",
-    "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/console.png"
+    "vuln-lab/SSTI/Flask_practice/flaskPractice/Lib/site-packages/werkzeug/debug/shared/less.png"
   ]
 }
