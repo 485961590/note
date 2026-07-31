@@ -70,7 +70,6 @@ Sink: 直接拼入 SQL 语句执行
 ### 核心考点：MySQL `||` 运算符的双重身份
 
 MySQL 的 `||` 在不同 `sql_mode` 下有不同含义：
-
 | sql_mode | `||` 含义 | `select 1 || flag from Flag` 的结果 |
 |----------|----------|-----------------------------------|
 | 默认（无 PIPES_AS_CONCAT） | 逻辑 OR | `1 OR flag`，flag 非空，等价于 `1` |

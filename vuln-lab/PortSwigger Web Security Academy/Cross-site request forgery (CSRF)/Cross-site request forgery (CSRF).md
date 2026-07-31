@@ -249,7 +249,7 @@ email=pwned@evil-user.net
 
 ---
 
-#### 4. CSRF 令牌绑定到非会话 Cookie
+#### ==4. CSRF 令牌绑定到非会话 Cookie==
 
 **缺陷：** 应用程序将 CSRF 令牌绑定到一个独立的 Cookie（如 `csrfKey`），而非绑定到会话 Cookie（`session`）。验证逻辑是：从请求中取出 `csrfKey` Cookie 的值，根据这个值去查询"哪个令牌是有效的"，然后比对请求参数中的 `csrf` 是否匹配。
 
