@@ -4,76 +4,141 @@
 
 ---
 
+## 本文使用的示例文件
+
+后面所有例子都基于这两个文件，先看一下它们的内容：
+
+**app.log** — 应用程序日志：
+
+```
+2024-01-15 10:23:45 INFO  Server started on port 8080
+2024-01-15 10:23:46 DEBUG Loading configuration from /etc/app.conf
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:02 WARN  Retrying connection (attempt 1/3)
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
+2024-01-15 10:25:00 FATAL Unable to start application
+2024-01-15 10:30:00 INFO  Server shutdown complete
+```
+
+**access.log** — Web 服务器访问日志：
+
+```
+192.168.1.10 - - [15/Jan/2024:10:23:45 +0800] "GET /index.html HTTP/1.1" 200 1234
+192.168.1.10 - - [15/Jan/2024:10:23:46 +0800] "GET /style.css HTTP/1.1" 304 0
+10.0.0.5 - - [15/Jan/2024:10:23:47 +0800] "POST /api/login HTTP/1.1" 200 256
+192.168.1.10 - - [15/Jan/2024:10:24:01 +0800] "GET /api/data HTTP/1.1" 500 89
+10.0.0.5 - - [15/Jan/2024:10:24:02 +0800] "GET /about.html HTTP/1.1" 200 2048
+172.16.0.1 - - [15/Jan/2024:10:24:05 +0800] "POST /api/login HTTP/1.1" 401 45
+192.168.1.10 - - [15/Jan/2024:10:24:06 +0800] "GET /index.html HTTP/1.1" 200 1234
+```
+
+---
+
 ## grep — 文本搜索
 
 从文件或标准输入中匹配模式，输出匹配行。
 
 ### 常用选项
 
-| 选项 | 说明 |
-|------|------|
-| `-i` | 忽略大小写 |
-| `-v` | 反向匹配（输出不匹配的行） |
-| `-n` | 显示行号 |
-| `-c` | 只输出匹配行数 |
-| `-l` | 只列出包含匹配的文件名 |
-| `-r` / `-R` | 递归搜索目录 |
-| `-E` | 扩展正则（等同于 `egrep`） |
-| `-P` | Perl 正则（更强大） |
-| `-o` | 只输出匹配的部分（而非整行） |
-| `-w` | 整词匹配 |
-| `-A N` | 显示匹配行后 N 行 |
-| `-B N` | 显示匹配行前 N 行 |
-| `-C N` | 显示匹配行前后各 N 行 |
-| `-H` | 始终显示文件名（多文件搜索时默认） |
+| 选项          | 说明                |
+| ----------- | ----------------- |
+| `-i`        | 忽略大小写             |
+| `-v`        | 反向匹配（输出不匹配的行）     |
+| `-n`        | 显示行号              |
+| `-c`        | 只输出匹配行数           |
+| `-l`        | 只列出包含匹配的文件名       |
+| `-r` / `-R` | 递归搜索目录            |
+| `-E`        | 扩展正则（等同于 `egrep`） |
+| `-P`        | Perl 正则（更强大）      |
+| `-o`        | 只输出匹配的部分（而非整行）    |
+| `-w`        | 整词匹配              |
+| `-A N`      | 显示匹配行后 N 行        |
+| `-B N`      | 显示匹配行前 N 行        |
+| `-C N`      | 显示匹配行前后各 N 行      |
 
-### 基础示例
+### 示例
+
+以下示例都基于 `app.log`（内容见上文）：
 
 ```bash
-# 匹配空行
-grep -v '^$' 文件名.txt
-^匹配行首（行的开头位置）
-$匹配行尾（行的尾部位置）
-^$就是空行
-# 搜索单个关键词
-grep "error" /var/log/syslog
+# === 基础搜索：查找包含 "ERROR" 的行 ===
+$ grep "ERROR" app.log
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
 
-# 忽略大小写 + 显示行号
-grep -in "error" /var/log/syslog
+# === 忽略大小写：大小写不敏感的搜索 ===
+$ grep -i "error" app.log
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
 
-# 递归搜索目录
-grep -r "192.168.1" /etc/
+# === 显示行号：知道匹配内容在第几行 ===
+$ grep -n "ERROR" app.log
+3:2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+5:2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
 
-# 反向匹配（排除注释行和空行）
-grep -v "^#" /etc/ssh/sshd_config | grep -v "^$"
+# === 反向匹配：排除 INFO 行，只看有问题和值得注意的日志（WARN也算） ===
+$ grep -v "INFO" app.log
+2024-01-15 10:23:46 DEBUG Loading configuration from /etc/app.conf
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:02 WARN  Retrying connection (attempt 1/3)
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
+2024-01-15 10:25:00 FATAL Unable to start application
 
-# 只输出文件名
-grep -rl "TODO" ./src/
+# === 统计匹配次数：只看数量，不看具体内容 ===
+$ grep -c "ERROR" app.log
+2
 
-# 统计匹配次数
-grep -c "ERROR" app.log
+# === 只输出匹配的部分（-o 提取）：从日志中提取所有 IP 地址 ===
+$ grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' app.log
+192.168.1.100
+192.168.1.100
 
-# 正则：匹配 IP 地址
-grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' access.log
+# === 整词匹配（-w）：搜索 "INFO" 整词，不会匹配到 "INFO" 以外的内容 ===
+$ grep -w "INFO" app.log
+2024-01-15 10:23:45 INFO  Server started on port 8080
+2024-01-15 10:30:00 INFO  Server shutdown complete
 
-# 上下文：异常前后各 3 行
-grep -C 3 "Exception" app.log
+# === 上下文（-C）：显示匹配行及其前后各 1 行，方便看错误发生的前后文 ===
+$ grep -C 1 "ERROR" app.log
+2024-01-15 10:23:46 DEBUG Loading configuration from /etc/app.conf
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:02 WARN  Retrying connection (attempt 1/3)
+--
+2024-01-15 10:24:02 WARN  Retrying connection (attempt 1/3)
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
+2024-01-15 10:25:00 FATAL Unable to start application
 ```
 
 ### 常见组合
 
 ```bash
-# 查找进程中排除 grep 自身
-ps aux | grep nginx | grep -v grep
+# === 查找进程并排除 grep 自身 ===
+$ ps aux | grep nginx | grep -v grep
+root      1234  0.0  0.1  45678  1234 ?  Ss   Jan15  0:00 nginx: master
+www-data  1235  0.0  0.2  45678  2345 ?  S    Jan15  0:01 nginx: worker
 
-# 统计每个 IP 的访问次数（Top 10）
-grep -oE '^[0-9.]+' access.log | sort | uniq -c | sort -rn | head -10
+# === 从 access.log 统计每个 IP 访问次数（Top 3） ===
+$ grep -oE '^[0-9.]+' access.log | sort | uniq -c | sort -rn | head -3
+      4 192.168.1.10
+      2 10.0.0.5
+      1 172.16.0.1
 
-# 搜索包含多个关键词的行（AND）
-grep "error" app.log | grep "timeout"
+# === AND 逻辑：同时包含 "ERROR" 和 "timeout" 的行 ===
+$ grep "ERROR" app.log | grep "timeout"
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
 
-# 搜索包含任一关键词的行（OR）
-grep -E "error|fail|panic" app.log
+# === OR 逻辑：包含 "ERROR" 或 "FATAL" 的行 ===
+$ grep -E "ERROR|FATAL" app.log
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
+2024-01-15 10:25:00 FATAL Unable to start application
+
+# === 排除注释行和空行：查看有效配置 ===
+$ grep -v "^#" /etc/ssh/sshd_config | grep -v "^$"
+Port 22
+PermitRootLogin yes
+PasswordAuthentication yes
+...
 ```
 
 ---
@@ -91,79 +156,117 @@ grep -E "error|fail|panic" app.log
 | `-n` | 静默模式，不自动打印（配合 `p` 使用） |
 | `-e` | 多个编辑命令 |
 | `-E` / `-r` | 扩展正则 |
-**要替换内容必须遵循`s/旧/新/`没有s则语法错误**
-**要删除内容则无需s只需匹配内容然后使用d例如：/^$/d匹配空行然后删除**
-### 基础示例
 
-```bash
-# 去除所有空行空行
-sed '/^$/d' 文件名.txt
-# 替换第一个匹配
-sed 's/old/new/' file.txt
+**要替换内容必须遵循 `s/旧/新/`，没有 s 则语法错误。**
 
-# 全局替换
-sed 's/old/new/g' file.txt
+**要删除内容则无需 s，只需匹配内容然后使用 d，例如：`/^$/d` 匹配空行然后删除。**
 
-# 替换第 3 次出现
-sed 's/old/new/3' file.txt
+### 示例：替换
 
-# 直接修改文件（带备份）
-sed -i.bak 's/old/new/g' file.txt
+以下示例使用一个简单文件 `greeting.txt`，内容为：
 
-# 删除匹配行
-sed '/pattern/d' file.txt
-
-# 删除空行
-sed '/^$/d' file.txt
-
-# 删除第 5 到第 10 行
-sed '5,10d' file.txt
-
-# 只打印第 3 到第 7 行
-sed -n '3,7p' file.txt
-
-# 在匹配行后追加
-sed '/pattern/a\新行内容' file.txt
-
-# 在匹配行前插入
-sed '/pattern/i\新行内容' file.txt
-
-# 替换指定行
-sed '3s/old/new/' file.txt
-
-# 多个替换
-sed -e 's/foo/bar/' -e 's/baz/qux/' file.txt
+```
+hello world
+hello world
+hello world
 ```
 
-### 高级替换
+```bash
+# === 替换每行第一个匹配 ===
+$ sed 's/hello/hi/' greeting.txt
+hi world
+hi world
+hi world
+
+# === 全局替换（g 标志）：替换每行所有匹配 ===
+$ sed 's/hello/hi/g' greeting.txt
+hi world
+hi world
+hi world
+
+# === 替换指定行：只替换第 2 行 ===
+$ sed '2s/hello/hi/' greeting.txt
+hello world
+hi world
+hello world
+
+# === 多个替换：同时替换 hello 和 world ===
+$ sed -e 's/hello/hi/' -e 's/world/earth/' greeting.txt
+hi earth
+hi earth
+hi earth
+```
+
+### 示例：删除
 
 ```bash
-# 分组引用：交换两列
-echo "hello world" | sed 's/\(.*\) \(.*\)/\2 \1/'
-# 输出：world hello
+# === 准备一个有空白行的文件 ===
+$ cat config.txt
+# 这是注释
+port=8080
 
-# 用 & 引用整个匹配
-echo "abc123" | sed 's/[0-9]\+/(&)/'
-# 输出：abc(123)
+host=localhost
 
-# 去掉行尾空格
-sed 's/[[:space:]]*$//' file.txt
+# 另一条注释
+debug=true
 
-# HTML 标签去除
-sed 's/<[^>]*>//g' file.html
+# === 删除空行 ===
+$ sed '/^$/d' config.txt
+# 这是注释
+port=8080
+host=localhost
+# 另一条注释
+debug=true
+
+# === 删除注释行 ===
+$ sed '/^#/d' config.txt
+port=8080
+
+host=localhost
+
+debug=true
+
+# === 同时删除注释行和空行（管道串联） ===
+$ sed '/^#/d' config.txt | sed '/^$/d'
+port=8080
+host=localhost
+debug=true
+```
+
+### 示例：高级替换
+
+```bash
+# === 分组引用：交换两列位置 ===
+$ echo "hello world" | sed 's/\(.*\) \(.*\)/\2 \1/'
+world hello
+
+# === & 引用整个匹配：给数字加括号 ===
+$ echo "abc123" | sed 's/[0-9]\+/(&)/'
+abc(123)
+
+# === 去掉行尾空格 ===
+$ echo "hello   " | sed 's/[[:space:]]*$//'
+hello
+
+# === 去除 HTML 标签 ===
+$ echo "<p>Hello <b>World</b></p>" | sed 's/<[^>]*>//g'
+Hello World
 ```
 
 ### 常用组合
 
 ```bash
-# 修改配置文件（安全做法：先不改原文件）
-sed 's/^Port 22$/Port 2222/' /etc/ssh/sshd_config
+# === 提取日志时间范围：10:24:00 到 10:25:00 之间的日志 ===
+$ sed -n '/10:24/,/10:25/p' app.log
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:02 WARN  Retrying connection (attempt 1/3)
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
+2024-01-15 10:25:00 FATAL Unable to start application
 
-# 提取日志中的时间范围
-sed -n '/10:00/,/10:30/p' app.log
-
-# 给每行加行号（比 cat -n 灵活）
-sed = file.txt | sed 'N;s/\n/ /'
+# === 修改配置文件（先预览，确认无误再加 -i） ===
+$ sed 's/^Port 22$/Port 2222/' /etc/ssh/sshd_config
+Port 2222
+...
 ```
 
 ---
@@ -182,8 +285,7 @@ sed = file.txt | sed 'N;s/\n/ /'
 
 ### 内置变量
 
-默认tab，空格等空白字符为分割变量例如 root  kali  user
-	root为$1, kali为$2, user为$3
+默认 tab、空格等空白字符为分隔符。例如 `root  kali  user` 这一行中：root 为 $1, kali 为 $2, user 为 $3。
 
 | 变量 | 说明 |
 |------|------|
@@ -198,78 +300,155 @@ sed = file.txt | sed 'N;s/\n/ /'
 | `RS` | 输入记录分隔符（默认换行） |
 | `ORS` | 输出记录分隔符（默认换行） |
 
-### 基础示例
+### 示例：列操作
+
+以下示例基于 `access.log`（内容见本文开头）：
 
 ```bash
-# 打印第一列
-awk '{print $1}' file.txt
+# === 打印第一列（客户端 IP） ===
+$ awk '{print $1}' access.log
+192.168.1.10
+192.168.1.10
+10.0.0.5
+192.168.1.10
+10.0.0.5
+172.16.0.1
+192.168.1.10
 
-# 打印第一列和第三列（制表符分隔输出）
-awk '{print $1 "\t" $3}' file.txt
+# === 打印第一列和第九列（IP + HTTP 状态码），制表符分隔 ===
+$ awk '{print $1 "\t" $9}' access.log
+192.168.1.10    200
+192.168.1.10    304
+10.0.0.5        200
+192.168.1.10    500
+10.0.0.5        200
+172.16.0.1      401
+192.168.1.10    200
 
-# 逗号分隔的文件
-awk -F',' '{print $2}' data.csv
+# === 打印最后一列（$NF = 最后一个字段，即响应字节数） ===
+$ awk '{print $NF}' access.log
+1234
+0
+256
+89
+2048
+45
+1234
 
-# 打印最后一列
-awk '{print $NF}' file.txt
-
-# 带行号输出
-awk '{print NR ": " $0}' file.txt
-
-# 条件过滤：第三列 > 100
-awk '$3 > 100' file.txt
-
-# 正则匹配
-awk '/error/' app.log
-
-# 字段匹配
-awk '$2 == "ERROR"' app.log
+# === 带行号输出 ===
+$ awk '{print NR ": " $0}' access.log
+1: 192.168.1.10 - - [15/Jan/2024:10:23:45 +0800] "GET /index.html HTTP/1.1" 200 1234
+2: 192.168.1.10 - - [15/Jan/2024:10:23:46 +0800] "GET /style.css HTTP/1.1" 304 0
+3: 10.0.0.5 - - [15/Jan/2024:10:23:47 +0800] "POST /api/login HTTP/1.1" 200 256
+...
 ```
 
-### 计算与统计
+### 示例：条件过滤
 
 ```bash
-# 求和
-awk '{sum += $1} END {print sum}' numbers.txt
+# === 按数值过滤：状态码 >= 400（只看错误请求） ===
+$ awk '$9 >= 400' access.log
+192.168.1.10 - - [15/Jan/2024:10:24:01 +0800] "GET /api/data HTTP/1.1" 500 89
+172.16.0.1 - - [15/Jan/2024:10:24:05 +0800] "POST /api/login HTTP/1.1" 401 45
 
-# 平均值
-awk '{sum += $1; count++} END {print sum/count}' numbers.txt
+# === 正则匹配：包含 "ERROR" 的行 ===
+$ awk '/ERROR/' app.log
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
 
-# 最大值
-awk 'max < $1 {max = $1} END {print max}' numbers.txt
-
-# 按第二列分组求和
-awk '{group[$2] += $3} END {for (g in group) print g, group[g]}' data.txt
-
-# 统计行数、字数、字符数（相当于 wc）
-awk '{lines++; words += NF; chars += length($0)}
-     END {print lines, words, chars}' file.txt
+# === 字段精确匹配：第三列等于 "ERROR" ===
+$ awk '$3 == "ERROR"' app.log
+2024-01-15 10:24:01 ERROR Connection timeout to 192.168.1.100:3306
+2024-01-15 10:24:05 ERROR Connection refused by 192.168.1.100:3306
 ```
 
-### 格式化输出
+### 示例：逗号分隔文件（CSV）
+
+假设 `data.csv` 内容为：
+
+```
+name,age,city,score
+Zhang,21,Beijing,85
+Li,22,Shanghai,90
+Wang,20,Guangzhou,72
+Zhao,23,Shenzhen,95
+```
 
 ```bash
-# printf 格式化（类似 C 语言）
-awk '{printf "%-20s %10d\n", $1, $2}' file.txt
+# === 指定逗号为分隔符，提取第二列（年龄） ===
+$ awk -F',' '{print $2}' data.csv
+age
+21
+22
+20
+23
 
-# 修改输出分隔符
-awk 'BEGIN {OFS=","} {print $1, $2, $3}' data.txt
+# === 条件过滤：分数大于 80 的行 ===
+$ awk -F',' '$4 > 80' data.csv
+name,age,city,score
+Zhang,21,Beijing,85
+Li,22,Shanghai,90
+Zhao,23,Shenzhen,95
+```
+
+### 示例：计算与统计
+
+假设 `numbers.txt` 内容为：
+
+```
+10
+25
+8
+42
+15
+```
+
+```bash
+# === 求和 ===
+$ awk '{sum += $1} END {print sum}' numbers.txt
+100
+
+# === 平均值 ===
+$ awk '{sum += $1; count++} END {print sum/count}' numbers.txt
+20
+
+# === 最大值 ===
+$ awk 'max < $1 {max = $1} END {print max}' numbers.txt
+42
+
+# === 统计行数、单词数、字符数（相当于 wc） ===
+$ awk '{lines++; words += NF; chars += length($0)} END {print lines, words, chars}' app.log
+7 63 475
+```
+
+### 示例：格式化输出
+
+```bash
+# === printf 格式化：左对齐 20 字符宽度输出第一列，右对齐 10 字符宽度输出最后一列 ===
+$ awk '{printf "%-20s %10d\n", $1, $NF}' access.log
+192.168.1.10              1234
+192.168.1.10                 0
+10.0.0.5                   256
+192.168.1.10                89
+10.0.0.5                  2048
+172.16.0.1                  45
+192.168.1.10              1234
 ```
 
 ### 常用组合
 
 ```bash
-# 统计每个 IP 的请求数（等同于 grep+sort+uniq 但一步完成）
-awk '{count[$1]++} END {for (ip in count) print count[ip], ip}' access.log | sort -rn
+# === 统计每个 IP 的请求数（一步完成，不需要 grep+sort+uniq） ===
+$ awk '{count[$1]++} END {for (ip in count) print count[ip], ip}' access.log | sort -rn
+4 192.168.1.10
+2 10.0.0.5
+1 172.16.0.1
 
-# 计算日志中所有响应时间的平均值
-awk '{sum += $NF; n++} END {print sum/n " ms"}' response.log
-
-# 提取特定列并格式化（top 10 内存进程）
-ps aux | awk '{print $4 "\t" $11}' | sort -rn | head -10
-
-# 合并多行（把每 3 行合并为一行，制表符分隔）
-awk 'ORS=NR%3?"\t":"\n"' file.txt
+# === 提取特定列并格式化：ps 内存 Top 3 ===
+$ ps aux | awk '{print $4 "\t" $11}' | sort -rn | head -3
+12.5    /usr/bin/java
+8.2     /usr/bin/python3
+3.1     /usr/sbin/mysqld
 ```
 
 ---
@@ -288,33 +467,56 @@ awk 'ORS=NR%3?"\t":"\n"' file.txt
 | `-s` | 不输出不含分隔符的行 |
 | `--complement` | 提取**不**在 `-f` 范围内的字段 |
 
-### 基础示例
+### 示例
+
+以下示例基于 `access.log` 和 `/etc/passwd`：
 
 ```bash
-# 提取冒号分隔的第一列（/etc/passwd 用户名）
-cut -d: -f1 /etc/passwd
+# === 按分隔符提取：/etc/passwd 第一列（用户名），分隔符为冒号 ===
+$ head -3 /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
 
-# 提取第 1 和第 7 列（用户名 + shell）
-cut -d: -f1,7 /etc/passwd
+$ cut -d: -f1 /etc/passwd | head -3
+root
+daemon
+bin
 
-# 提取第 3 到最后一列
-cut -d: -f3- /etc/passwd
+# === 提取第 1 列和第 7 列（用户名 + 默认 shell） ===
+$ cut -d: -f1,7 /etc/passwd | head -3
+root:/bin/bash
+daemon:/usr/sbin/nologin
+bin:/usr/sbin/nologin
 
-# 按字符位置提取（每行第 1-10 个字符）
-cut -c1-10 file.txt
+# === 按字符位置提取：每行第 1 到 15 个字符 ===
+$ cut -c1-15 access.log
+192.168.1.10 -
+192.168.1.10 -
+10.0.0.5 - - [
+192.168.1.10 -
+10.0.0.5 - - [
+172.16.0.1 - -
+192.168.1.10 -
 
-# 提取 CSV 第二列（忽略无逗号行）
-cut -d, -f2 -s data.csv
+# === CSV 第二列：忽略不含逗号的行（-s） ===
+$ cat data.csv
+name,age,city,score
+Zhang,21,Beijing,85
+
+$ cut -d, -f2 -s data.csv
+age
+21
 ```
 
 ### 常用组合
 
 ```bash
-# 列出所有用户及其 shell
-cut -d: -f1,7 /etc/passwd | column -t -s:
-
-# 统计每种 shell 使用人数
-cut -d: -f7 /etc/passwd | sort | uniq -c | sort -rn
+# === 统计每种 shell 的使用人数 ===
+$ cut -d: -f7 /etc/passwd | sort | uniq -c | sort -rn | head -3
+     25 /usr/sbin/nologin
+     10 /bin/bash
+      5 /bin/false
 ```
 
 ---
@@ -334,26 +536,51 @@ cut -d: -f7 /etc/passwd | sort | uniq -c | sort -rn
 | `-o` | 输出到文件（可覆盖原文件） |
 | `-R` | 随机排序 |
 
-### 基础示例
+### 示例
 
 ```bash
-# 数值排序（默认按字符序会出现 1,10,2,...）
-sort -n numbers.txt
+# === 字符序 vs 数值序的区别 ===
+$ cat nums.txt
+2
+10
+1
+100
 
-# 按第二列数值逆序
-sort -k2 -nr data.txt
+$ sort nums.txt           # 字符序：逐字符比较，"1" < "2"
+1
+10
+100
+2
 
-# 按逗号分隔的第三列排序
-sort -t, -k3 -n data.csv
+$ sort -n nums.txt         # 数值序：按数值大小
+1
+2
+10
+100
 
-# 去重
-sort -u file.txt
+# === 按指定列排序：access.log 按第 9 列（状态码）数值逆序排列 ===
+$ awk '{print $1, $9}' access.log | sort -k2 -nr
+192.168.1.10 500
+10.0.0.5 401
+192.168.1.10 304
+192.168.1.10 200
+192.168.1.10 200
+10.0.0.5 200
+10.0.0.5 200
 
-# 按文件大小排序（人类可读）
-du -sh * | sort -h
+# === 按逗号分隔的指定列排序 ===
+$ sort -t, -k4 -nr data.csv
+name,age,city,score
+Zhao,23,Shenzhen,95
+Li,22,Shanghai,90
+Zhang,21,Beijing,85
+Wang,20,Guangzhou,72
 
-# 随机打乱
-sort -R file.txt | head -5
+# === 去重：重复行只保留一份 ===
+$ echo -e "apple\nbanana\napple\ncherry" | sort -u
+apple
+banana
+cherry
 ```
 
 ---
@@ -372,33 +599,28 @@ sort -R file.txt | head -5
 | `-i` | 忽略大小写 |
 | `-w N` | 只比较前 N 个字符 |
 
-### 基础示例
+### 示例
 
 ```bash
-# 计数（经典用法）
-sort file.txt | uniq -c | sort -rn
+# === 先 sort 再 uniq -c：统计每个 IP 出现次数 ===
+$ awk '{print $1}' access.log | sort | uniq -c | sort -rn
+      4 192.168.1.10
+      2 10.0.0.5
+      1 172.16.0.1
 
-# 显示重复项
-sort file.txt | uniq -d
+# === 只显示重复项 ===
+$ echo -e "apple\nbanana\napple\ncherry\nbanana" | sort | uniq -d
+apple
+banana
 
-# 显示唯一项
-sort file.txt | uniq -u
+# === 只显示唯一项（只出现过一次的行）===
+$ echo -e "apple\nbanana\napple\ncherry\nbanana" | sort | uniq -u
+cherry
 
-# 不区分大小写计数
-sort file.txt | uniq -ci
-```
-
-### 常用组合
-
-```bash
-# 日志中最频繁的 10 个 IP
-awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -10
-
-# 统计单词频率
-cat document.txt | tr ' ' '\n' | sort | uniq -c | sort -rn | head -20
-
-# 找出只出现一次的行（异常检测）
-sort data.txt | uniq -u
+# === 忽略大小写去重 ===
+$ echo -e "Apple\napple\nBanana" | sort | uniq -ci
+      2 Apple
+      1 Banana
 ```
 
 ---
@@ -415,30 +637,31 @@ sort data.txt | uniq -u
 | `-m` | 字符数（多字节字符用这个） |
 | `-L` | 最长行的长度 |
 
-### 基础示例
+### 示例
 
 ```bash
-# 统计文件行数
-wc -l file.txt
+# === 统计文件行数 ===
+$ wc -l app.log
+7 app.log
 
-# 统计多个文件
-wc -l *.log
+# === 同时显示行数、单词数、字节数 ===
+$ wc app.log
+  7  63 475 app.log
+#  行数  单词数  字节数
 
-# 统计目录下所有 .py 文件的总行数
-find . -name "*.py" | xargs wc -l
-```
+# === 统计多个文件 ===
+$ wc -l app.log access.log
+  7 app.log
+  7 access.log
+ 14 total
 
-### 常用组合
+# === 统计当前目录下文件数量 ===
+$ ls | wc -l
+12
 
-```bash
-# 统计当前目录文件数
-ls | wc -l
-
-# 统计进程数
-ps aux | wc -l
-
-# 统计代码行数（排除空行和注释）
-grep -v "^$\|^#" nginx.conf | wc -l
+# === 统计代码有效行数（排除空行和注释） ===
+$ grep -v "^$\|^#" nginx.conf | wc -l
+45
 ```
 
 ---
@@ -456,38 +679,35 @@ grep -v "^$\|^#" nginx.conf | wc -l
 | `-c` | 取反（操作不在集合中的字符） |
 | `-t` | 截断 SET1 到 SET2 长度 |
 
-### 基础示例
+### 示例
 
 ```bash
-# 大小写转换
-echo "Hello World" | tr 'a-z' 'A-Z'     # HELLO WORLD
-echo "HELLO" | tr 'A-Z' 'a-z'            # hello
+# === 大小写转换 ===
+$ echo "Hello World" | tr 'a-z' 'A-Z'
+HELLO WORLD
 
-# 删除字符
-echo "abc123" | tr -d '0-9'              # abc
-echo "a  b   c" | tr -s ' '              # a b c（压缩空格）
+$ echo "HELLO" | tr 'A-Z' 'a-z'
+hello
 
-# 替换字符
-echo "hello world" | tr ' ' '_'          # hello_world
+# === 删除指定字符：去掉所有数字 ===
+$ echo "abc123def456" | tr -d '0-9'
+abcdef
 
-# 取反删除（只保留数字）
-echo "abc123def456" | tr -cd '0-9'       # 123456
+# === 只保留数字（-c 取反 + -d 删除） ===
+$ echo "abc123def456" | tr -cd '0-9'
+123456
 
-# 把换行符替换为空格（多行合并为一行）
-cat file.txt | tr '\n' ' '
-```
+# === 压缩连续重复字符：多个空格变成一个 ===
+$ echo "a   b    c" | tr -s ' '
+a b c
 
-### 常用组合
+# === 字符替换：空格换成下划线 ===
+$ echo "hello world" | tr ' ' '_'
+hello_world
 
-```bash
-# DOS/Windows 换行符转 Unix（删除 \r）
-tr -d '\r' < dosfile.txt > unixfile.txt
-
-# 生成随机密码
-tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 16
-
-# URL 编码中 % 替换（简单版）
-echo "hello world" | tr ' ' '%'
+# === 多行合并为一行：换行符换成空格 ===
+$ cat app.log | tr '\n' ' '
+2024-01-15 10:23:45 INFO  Server started on port 8080 2024-01-15 10:23:46 DEBUG ...
 ```
 
 ---
@@ -507,40 +727,30 @@ echo "hello world" | tr ' ' '%'
 | `-t` | 打印执行的命令 |
 | `-P N` | 并行执行 N 个进程 |
 
-### 基础示例
+### 示例
 
 ```bash
-# 删除查找到的文件
-find . -name "*.tmp" | xargs rm
+# === -n：指定每次传几个参数 ===
+$ echo {1..10} | xargs -n3
+1 2 3
+4 5 6
+7 8 9
+10
 
-# 安全的做法（处理含空格的文件名）
-find . -name "*.tmp" -print0 | xargs -0 rm
+# === -I {}：占位符模式，每个参数执行一次命令 ===
+$ echo "file1.txt\nfile2.txt" | xargs -I {} cp {} {}.bak
+# 等效于依次执行：
+# cp file1.txt file1.txt.bak
+# cp file2.txt file2.txt.bak
 
-# 每次处理 3 个文件
-echo {1..10} | xargs -n3
-# 输出：1 2 3
-#       4 5 6
-#       7 8 9
-#       10
+# === -0：处理含空格的文件名（配合 find -print0） ===
+$ find . -name "*.log" -print0 | xargs -0 rm
+# -print0 用 null 字符分隔文件名，-0 按 null 字符读取
+# 这样即使文件名里有空格也不会被错误拆分
 
-# 占位符模式（每行执行一次）
-cat urls.txt | xargs -I {} curl -O {}
-
-# 执行前确认
-find . -name "*.log" | xargs -p rm
-```
-
-### 常用组合
-
-```bash
-# 批量重命名（加 .bak 后缀）
-ls *.txt | xargs -I {} mv {} {}.bak
-
-# 并行下载
-cat urls.txt | xargs -P 4 -I {} wget {}
-
-# 统计所有 .c 文件行数总和
-find . -name "*.c" -print0 | xargs -0 wc -l | tail -1
+# === 安全删除：执行前确认（-p） ===
+$ find . -name "*.tmp" | xargs -p rm
+rm ./a.tmp ./b.tmp?...y   # 输入 y 确认后才执行
 ```
 
 ---
@@ -556,33 +766,23 @@ find . -name "*.c" -print0 | xargs -0 wc -l | tail -1
 | `-a` | 追加到文件（默认覆盖） |
 | `-i` | 忽略中断信号 |
 
-### 基础示例
+### 示例
 
 ```bash
-# 输出到屏幕同时保存到文件
-./script.sh | tee output.log
+# === 输出到屏幕同时保存到文件 ===
+$ ./script.sh | tee output.log
+# 屏幕上正常看到输出，同时 output.log 里也存了一份
 
-# 追加到文件
-echo "new line" | tee -a log.txt
+# === 追加模式：不覆盖已有内容 ===
+$ echo "new log entry" | tee -a app.log
+new log entry
+# app.log 末尾追加了这行，原有内容不变
 
-# 多路输出
-cat data.txt | tee file1.txt file2.txt
-
-# 中间结果保存（不打断管道）
-grep "ERROR" app.log | tee errors.txt | wc -l
-```
-
-### 常用组合
-
-```bash
-# 调试管道：保存中间结果
-cat access.log \
-  | grep "2024-01" | tee step1.log \
-  | awk '{print $1}' | tee step2.log \
-  | sort | uniq -c | sort -rn | tee final.log
-
-# sudo 写文件（绕过重定向权限限制）
-echo "new config" | sudo tee /etc/config.conf > /dev/null
+# === 管道调试：保存中间结果但不打断数据流 ===
+$ grep "ERROR" app.log | tee errors.txt | wc -l
+2
+# 屏幕输出：2
+# errors.txt 里保存了匹配到的完整行
 ```
 
 ---
@@ -592,50 +792,56 @@ echo "new config" | sudo tee /etc/config.conf > /dev/null
 ### 日志分析一条龙
 
 ```bash
-# Top 10 IP 访问量
-awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -10
+# === Top IP 访问量 ===
+$ awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -3
+      4 192.168.1.10
+      2 10.0.0.5
+      1 172.16.0.1
 
-# 统计 HTTP 状态码分布
-awk '{print $9}' access.log | sort | uniq -c | sort -rn
+# === HTTP 状态码分布 ===
+$ awk '{print $9}' access.log | sort | uniq -c | sort -rn
+      3 200
+      1 500
+      1 401
+      1 304
 
-# 响应时间超过 1 秒的请求
-awk '$NF > 1' response.log | wc -l
+# === 响应超过 1KB 的请求 ===
+$ awk '$NF > 1024' access.log
+192.168.1.10 - - [15/Jan/2024:10:23:45 +0800] "GET /index.html HTTP/1.1" 200 1234
+10.0.0.5 - - [15/Jan/2024:10:24:02 +0800] "GET /about.html HTTP/1.1" 200 2048
+192.168.1.10 - - [15/Jan/2024:10:24:06 +0800] "GET /index.html HTTP/1.1" 200 1234
 ```
 
 ### 配置文件处理
 
 ```bash
-# 列出所有非注释、非空行的配置
-grep -v "^#" nginx.conf | grep -v "^$"
+# === 列出所有非注释、非空行的配置 ===
+$ grep -v "^#" /etc/ssh/sshd_config | grep -v "^$"
+Port 22
+PermitRootLogin yes
+PasswordAuthentication yes
+...
 
-# 查找所有 listen 端口
-grep -oP 'listen\s+\K\d+' nginx.conf | sort -u
+# === 查找所有 listen 端口 ===
+$ grep -oP 'listen\s+\K\d+' /etc/nginx/nginx.conf | sort -u
+80
+443
 ```
 
 ### 系统巡检
 
 ```bash
-# 磁盘使用 Top 5 目录
-du -sh /* 2>/dev/null | sort -h | tail -5
+# === 磁盘使用 Top 3 目录 ===
+$ du -sh /* 2>/dev/null | sort -h | tail -3
+2.3G    /usr
+4.5G    /var
+12G     /home
 
-# 内存 Top 10 进程
-ps aux | awk '{print $4, $11}' | sort -rn | head -10
-
-# 最近登录的 5 个 IP
-last | awk '{print $3}' | grep -oE '[0-9.]+' | sort | uniq -c | sort -rn | head -5
-```
-
-### 批量操作
-
-```bash
-# 查找并压缩 30 天前的日志
-find /var/log -name "*.log" -mtime +30 -print0 | xargs -0 gzip
-
-# 替换目录下所有文件中的字符串
-grep -rl "old_domain" ./ | xargs sed -i 's/old_domain/new_domain/g'
-
-# 统计项目代码行数（排除 node_modules）
-find . -name "*.js" -not -path "*/node_modules/*" | xargs wc -l | tail -1
+# === 内存 Top 3 进程 ===
+$ ps aux | awk '{print $4 "\t" $11}' | sort -rn | head -3
+12.5    /usr/bin/java
+8.2     /usr/bin/python3
+3.1     /usr/sbin/mysqld
 ```
 
 ---

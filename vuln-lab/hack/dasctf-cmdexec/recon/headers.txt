@@ -1,9 +1,0 @@
-HTTP/1.1 200 OK
-Server: openresty
-Date: Fri, 17 Jul 2026 04:06:43 GMT
-Content-Type: text/html; charset=UTF-8
-Connection: keep-alive
-Vary: Accept-Encoding
-X-Powered-By: PHP/7.3.13
-Cache-Control: no-cache
-

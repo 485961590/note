@@ -8,16 +8,45 @@
         "type": "tabs",
         "children": [
           {
-            "id": "cb14133e5b9b0d4d",
+            "id": "570ab0b82d95354c",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Writeups/CVE-2017-5645-Log4j-RCE.md",
+                "mode": "preview",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "新标签页"
+              "title": "CVE-2017-5645-Log4j-RCE"
+            }
+          },
+          {
+            "id": "4548d10336b4cff1",
+            "type": "leaf",
+            "state": {
+              "type": "pdf",
+              "state": {
+                "file": "中网信安/课件/未授权访问漏洞.pdf"
+              },
+              "icon": "lucide-file-text",
+              "title": "未授权访问漏洞"
+            }
+          },
+          {
+            "id": "634307030da39b00",
+            "type": "leaf",
+            "state": {
+              "type": "pdf",
+              "state": {
+                "file": "中网信安/课件/SSRF+Redis.pdf"
+              },
+              "icon": "lucide-file-text",
+              "title": "SSRF+Redis"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -37,7 +66,9 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
               },
               "icon": "lucide-folder-closed",
               "title": "文件列表"
@@ -74,7 +105,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 322.49999618530273
+    "width": 222.07146835327148,
+    "collapsed": true
   },
   "right": {
     "id": "02f92fda0cfdb5e2",
@@ -152,13 +184,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "资料书籍/Python核心编程（中文第二版）带目录.pdf",
+                "file": "中网信安/课件/未授权访问漏洞.pdf",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Python核心编程（中文第二版）带目录 的大纲"
+              "title": "大纲"
             }
           }
         ],
@@ -166,8 +198,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200,
-    "collapsed": true
+    "width": 200
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -180,53 +211,53 @@
       "bases:新建数据库": false
     }
   },
-  "active": "cb14133e5b9b0d4d",
+  "active": "4548d10336b4cff1",
   "lastOpenFiles": [
-    "Vulnerability_Collection/XML External Entity (XXE)/橙子科技练习平台.md",
-    "Vulnerability_Collection/XML External Entity (XXE)/实体.md",
-    "Vulnerability_Collection/XML External Entity (XXE)/DTD.md",
-    "Vulnerability_Collection/XML External Entity (XXE)/XML外部实体注入.md",
-    "Vulnerability_Collection/XML External Entity (XXE)/Xinclude.md",
-    "Vulnerability_Collection/XML External Entity (XXE)/SVG 矢量图.md",
-    "Vulnerability_Collection/XML External Entity (XXE)/expect协议.md",
-    "Vulnerability_Collection/SQL Injection/sql-labs/二次注入.md",
-    "Vulnerability_Collection/SQL Injection/sql-labs/宽字节注入.md",
-    "Vulnerability_Collection/Deserialization/字符串逃逸.md",
-    "Vulnerability_Collection/Deserialization/session 反序列化.md",
-    "Vulnerability_Collection/Deserialization/php反序列化及pop链构造.md",
-    "Vulnerability_Collection/Deserialization/phar直接修改配置运行.md",
-    "Vulnerability_Collection/Deserialization/phar反序列化.md",
-    "Vulnerability_Collection/Cross-Site Scripting (XSS)/html实体编码与Unicode编码.md",
-    "Vulnerability_Collection/Cross-Site Scripting (XSS)/xss盗取cookie.md",
-    "Vulnerability_Collection/Server-Side Request Forgery (SSRF)/CTFHub.md",
-    "Vulnerability_Collection/Server-Side Request Forgery (SSRF)/ssrf bypass.md",
-    "Vulnerability_Collection/Server-Side Request Forgery (SSRF)/SSRF原理.md",
-    "Vulnerability_Collection/Server-Side Template Injection (SSTI)/判断模板引擎(也不完全对).md",
-    "Vulnerability_Collection/Server-Side Template Injection (SSTI)/SSTI.md",
-    "Vulnerability_Collection/Server-Side Template Injection (SSTI)/Flask SSTI模板注入/Flask SSTI.md",
-    "Vulnerability_Collection/Server-Side Template Injection (SSTI)/Flask SSTI模板注入/SSTI 链条关系图谱.md",
-    "Vulnerability_Collection/Server-Side Template Injection (SSTI)/Flask SSTI模板注入/过滤绕过.md",
-    "Vulnerability_Collection/upload/uplaod靶场.md",
-    "Vulnerability_Collection/Business Logic Flaws/长度截断.py",
-    "Vulnerability_Collection/Business Logic Flaws/案例.zip",
-    "Vulnerability_Collection/Business Logic Flaws/任意用户登录漏洞挖掘思路.md",
-    "Vulnerability_Collection/Business Logic Flaws/小程序抓包.docx",
-    "Vulnerability_Collection/Business Logic Flaws/Proxifier v3.42中文版.exe",
-    "Vulnerability_Collection/Business Logic Flaws/day2-逻辑漏洞.docx",
-    "Vulnerability_Collection/Business Logic Flaws/0x03逻辑漏洞之业务安全.pdf",
-    "Vulnerability_Collection/Business Logic Flaws/0x04逻辑漏洞之支付漏洞.pdf",
-    "Vulnerability_Collection/Business Logic Flaws/0x02逻辑漏洞之身份认证安全.pdf",
-    "Vulnerability_Collection/Business Logic Flaws/0x01逻辑漏洞简介.pdf",
-    "Vulnerability_Collection/Business Logic Flaws",
-    "Vulnerability_Collection/Deserialization/img/Pasted image 20250921212140.png",
-    "Vulnerability_Collection/Deserialization/img/Pasted image 20250921204226.png",
-    "Vulnerability_Collection/Deserialization/img/Pasted image 20250921215409.png",
-    "Vulnerability_Collection/File Upload/不许改图片/2.gif",
-    "Vulnerability_Collection/File Upload/二次渲染/676.gif",
-    "Vulnerability_Collection/File Upload/不许改图片/1.jpg",
-    "Vulnerability_Collection/File Upload/不许改图片/1.gif",
-    "Vulnerability_Collection/File Upload/二次渲染/1.gif",
-    "Vulnerability_Collection/File Upload/user_ini/web.jpg",
-    "Vulnerability_Collection/File Upload/img/2025-07-19-23-07-09-image.png"
+    "中网信安/课件/SSRF+Redis.pdf",
+    "中网信安/课件/Jsonp劫持.pdf",
+    "Tools/信息收集/fscan.md",
+    "中网信安/课件/未授权访问漏洞.pdf",
+    "中网信安/课件/~$RF+Redis.docx",
+    "中网信安/课件/SSRF+Redis.docx",
+    "中网信安/课件/62442df5866b662b98c2492f665b013d.par.temp",
+    "Tools/信息收集/dirsearch.md",
+    "Tools/信息收集/arp-scan.md",
+    "Tools/漏洞利用/Metasploit.md",
+    "Tools/开发工具/docker.md",
+    "中网信安/课件/01 PHP代码审计——beescms文件上传.pdf",
+    "中网信安/课件/5be9550a84d6b398c2a9520e274de176.par.temp",
+    "中网信安/课件/02 PHP代码审计——BlueCMS.pdf",
+    "中网信安/课件/ec3a45444402f0bd605d44a566a5c0ba.par.temp",
+    "Writeups/CVE-2017-5645-Log4j-RCE.md",
+    "中网信安/课件/网络基础.pdf",
+    "Tools/网络请求/curl.md",
+    "Tools/漏洞利用/sqlmap.md",
+    "Tools/密码破解/hashcat与John the Ripper.md",
+    "Tools/开发工具/regex.md",
+    "Tools/开发工具/git.md",
+    "Linux/Linux 包管理器.md",
+    "Linux/kali linux终端使用.md",
+    "Linux/Centos7配置网络.md",
+    "Linux/kali linux系统.md",
+    "Linux/SELinux.md",
+    "Linux/Linux-Docker.md",
+    "Linux/Linux文本处理命令.md",
+    "Writeups/PHP类型混淆绕过.md",
+    "vuln-lab/VulnHub/DarkHole-1/DarkHole-1-通关writeup.md",
+    "Tools/Metasploit.md",
+    "Tools/git.md",
+    "Tools/信息收集/nmap.md",
+    "Tools/regex.md",
+    "Tools/信息收集/subfinder.md",
+    "birthday-site/images/photo6.png",
+    "birthday-site/images/photo5.png",
+    "birthday-site/images/photo4.png",
+    "birthday-site/images/photo3.png",
+    "birthday-site/images/photo2.png",
+    "birthday-site/images/photo1.png",
+    "birthday/1785470728713_edit_757038022686679.png",
+    "birthday/1785470723800_edit_757022383781998.png",
+    "birthday/1785470720217_edit_756995680321331.png",
+    "birthday/1785470716573_edit_756976817830869.png"
   ]
 }
