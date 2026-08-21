@@ -10,40 +10,40 @@ curl [选项] [URL]
 
 ## 常用选项速查
 
-| 选项 | 说明 |
-|------|------|
-| `-X, --request <METHOD>` | 指定请求方法（GET / POST / PUT / DELETE...） |
-| `-H, --header <HEADER>` | 添加请求头 |
-| `-A, --user-agent <STR>` | 设置 User-Agent |
-| `-d, --data <DATA>` | 发送 POST 数据 |
-| `--compressed` | 请求压缩响应 |
-| `-F, --form <name=content>` | 上传文件（multipart/form-data） |
-| `-o, --output <FILE>` | 保存到指定文件 |
-| `-O, --remote-name` | 保存为远程文件名 |
-| `-i, --include` | 输出包含响应头 |
-| `-I, --head` | 仅获取响应头（HEAD 请求） |
-| `-v, --verbose` | 详细输出 |
-| `-s, --silent` | 静默模式 |
-| `-S, --show-error` | 静默时仍显示错误 |
-| `-f, --fail` | HTTP 错误时返回非零退出码 |
-| `-k, --insecure` | 忽略 SSL 证书验证 |
-| `--cacert <FILE>` | 指定 CA 证书 |
-| `-L, --location` | 跟随重定向 |
-| `-u, --user <user:password>` | 基本认证 |
-| `--digest` | Digest 认证 |
-| `-b, --cookie <data>` | 发送 Cookie |
-| `-c, --cookie-jar <FILE>` | 保存 Cookie 到文件 |
-| `-x, --proxy <[protocol://]host:port>` | 使用代理 |
-| `--resolve <host:port:addr>` | 自定义 DNS 解析 |
-| `-w, --write-out <FORMAT>` | 自定义输出格式 |
-| `--connect-timeout <SEC>` | 连接超时时间 |
-| `--max-time <SEC>` | 整个请求的最大时长 |
-| `--retry <NUM>` | 失败重试次数 |
-| `--retry-delay <SEC>` | 重试间隔时间 |
-| `--retry-max-time <SEC>` | 重试总时长上限 |
-| `--retry-connrefused` | 连接拒绝时也重试 |
-| `-C, --continue-at <OFFSET>` | 断点续传 |
-| `--limit-rate <SPEED>` | 限速下载 |
+| 选项                                     | 说明                                   |
+| -------------------------------------- | ------------------------------------ |
+| `-X, --request <METHOD>`               | 指定请求方法（GET / POST / PUT / DELETE...） |
+| `-H, --header <HEADER>`                | 添加请求头                                |
+| `-A, --user-agent <STR>`               | 设置 User-Agent                        |
+| `-d, --data <DATA>`                    | 发送 POST 数据                           |
+| `--compressed`                         | 请求压缩响应                               |
+| `-F, --form <name=content>`            | 上传文件（multipart/form-data）            |
+| `-o, --output <FILE>`                  | 保存到指定文件                              |
+| `-O, --remote-name`                    | 保存为远程文件名                             |
+| `-i, --include`                        | 输出包含响应头                              |
+| `-I, --head`                           | 仅获取响应头（HEAD 请求）                      |
+| `-v, --verbose`                        | 详细输出                                 |
+| `-s, --silent`                         | 静默模式                                 |
+| `-S, --show-error`                     | 静默时仍显示错误                             |
+| `-f, --fail`                           | HTTP 错误时返回非零退出码                      |
+| `-k, --insecure`                       | 忽略 SSL 证书验证                          |
+| `--cacert <FILE>`                      | 指定 CA 证书                             |
+| `-L, --location`                       | 跟随重定向                                |
+| `-u, --user <user:password>`           | 基本认证                                 |
+| `--digest`                             | Digest 认证                            |
+| `-b, --cookie <data>`                  | 发送 Cookie                            |
+| `-c, --cookie-jar <FILE>`              | 保存 Cookie 到文件                        |
+| `-x, --proxy <[protocol://]host:port>` | 使用代理                                 |
+| `--resolve <host:port:addr>`           | 自定义 DNS 解析                           |
+| `-w, --write-out <FORMAT>`             | 自定义输出格式                              |
+| `--connect-timeout <SEC>`              | 连接超时时间                               |
+| `--max-time <SEC>`                     | 整个请求的最大时长                            |
+| `--retry <NUM>`                        | 失败重试次数                               |
+| `--retry-delay <SEC>`                  | 重试间隔时间                               |
+| `--retry-max-time <SEC>`               | 重试总时长上限                              |
+| `--retry-connrefused`                  | 连接拒绝时也重试                             |
+| `-C, --continue-at <OFFSET>`           | 断点续传                                 |
+| `--limit-rate <SPEED>`                 | 限速下载                                 |
 
 ## 分类用法
 

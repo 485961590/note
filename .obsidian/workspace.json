@@ -4,53 +4,67 @@
     "type": "split",
     "children": [
       {
-        "id": "25f63e7b66daaac4",
+        "id": "b666f4a4b1a1730d",
         "type": "tabs",
         "children": [
           {
-            "id": "66da0b57482e6148",
+            "id": "5c27a3cd1a8a5432",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "vuln-lab/文件上传/文件上传漏洞.md",
-                "mode": "preview",
+                "file": "Tools/网络请求/curl.md",
+                "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "文件上传漏洞"
+              "title": "curl"
             }
           },
           {
-            "id": "7666368d3dc9dce1",
+            "id": "ee421ede05aa6f7e",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Linux/Linux文本处理命令.md",
+                "file": "vuln-lab/身份认证与授权/Web身份认证授权与访问控制学习指南.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Linux文本处理命令"
+              "title": "Web身份认证授权与访问控制学习指南"
             }
           },
           {
-            "id": "569360bed12a4abe",
+            "id": "3338cff82412a293",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Linux/find命令.md",
+                "file": "Code_languages/Go/fmt打印与格式化.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "fmt打印与格式化"
+            }
+          },
+          {
+            "id": "0c1ad905200a7a03",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "vuln-lab/PortSwigger Web Security Academy/File path traversal.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "find命令"
+              "title": "File path traversal"
             }
           }
         ],
-        "currentTab": 2
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -84,7 +98,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "",
+                "query": "重定向",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -109,7 +123,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 222.07146835327148
+    "width": 283.78576278686523
   },
   "right": {
     "id": "02f92fda0cfdb5e2",
@@ -187,7 +201,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Linux/find命令.md",
+                "file": "vuln-lab/身份认证与授权/Web身份认证授权与访问控制学习指南.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -201,7 +215,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 200,
+    "collapsed": true
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -214,53 +229,53 @@
       "bases:新建数据库": false
     }
   },
-  "active": "569360bed12a4abe",
+  "active": "ee421ede05aa6f7e",
   "lastOpenFiles": [
-    "Tools/提权与后渗透/linpeas.md",
-    "Linux/Linux文本处理命令.md",
-    "Protocol/FTP.md",
-    "Linux/find命令.md",
-    "Linux/find命令.md.tmp.25524.1b094e3b1b67",
-    "Linux/kali linux终端使用.md",
-    "Linux/kali linux系统.md",
-    "Writeups/HTB_Cap.md",
-    "Tools/提权与后渗透/LOLBAS.md",
-    "Tools/提权与后渗透/LOLBAS.md.tmp.25524.b6f5ef1cfdd9",
-    "Tools/提权与后渗透/GTFOBins.md",
-    "Tools/提权与后渗透/GTFOBins.md.tmp.25524.df7e11454eea",
-    "Tools/提权与后渗透/GTFOBins与LOLBAS.md",
-    "Tools/提权与后渗透/GTFOBins与LOLBAS.md.tmp.25524.b27b8000b9ed",
-    "Tools/提权与后渗透",
-    "Writeups/img/file-20260811221425177.png",
-    "Writeups/img/file-20260811221230257.png",
-    "Writeups/img/file-20260811221141286.png",
-    "Writeups/img/file-20260811221050706.png",
-    "Writeups/img/file-20260811220817828.png",
-    "Writeups/img/file-20260811220633131.png",
-    "Writeups/img/file-20260811220443781.png",
-    "Writeups/img/file-20260811215735705.png",
-    "Writeups/2026-07-14-成都文理学院.md",
-    "Writeups/img/file-20260811215438521.png",
-    "Protocol/DNS.md",
-    "Protocol/ARP.md",
-    "Protocol/TCP_UDP_HTTP_HTTPS.md",
-    "Protocol/HTTPandHTTPS.md",
-    "Protocol/Gopher.md",
-    "Writeups/img/file-20260811214547520.png",
-    "Writeups/img",
-    "vuln-lab/PHP类型比较绕过-MD5-Hash比较漏洞.md",
     "vuln-lab/文件上传/文件上传漏洞.md",
-    "Tools/信息收集/fscan.md",
-    "vuln-lab/实战记录/2026-07-14-成都文理学院.md",
-    "Tools/漏洞利用/Metasploit.md",
-    "中网信安/课件/常见中间件历史漏洞.pdf",
-    "Code_languages/Go/语言特性.md",
-    "Code_languages/Go/write_features.py",
-    "Code_languages/Go/write_features.py.tmp.19636.e0a42a7d6e59",
-    "Code_languages/Go/文件操作.md",
-    "中网信安/课件/Java漏洞原理与实战.pdf",
+    "vuln-lab/PortSwigger Web Security Academy/File path traversal.md",
+    "vuln-lab/PortSwigger Web Security Academy/API/API testing.md",
+    "王俊杰-渗透测试工程师-简历~156F1.tmp",
+    "王俊杰-渗透测试工程师-简历~113AE.tmp",
+    "王俊杰-渗透测试工程师-简历~C8F7E.tmp",
+    "~$杰-渗透测试工程师-简历.docx",
+    "_dump_restore.txt",
+    "王俊杰-渗透测试工程师-简历.docx",
+    "王俊杰-渗透测试工程师-简历~380A5.tmp",
+    "王俊杰-渗透测试工程师-简历~CADB2.tmp",
+    "王俊杰-渗透测试工程师-简历~C9141.tmp",
+    "王俊杰-渗透测试工程师-简历~BDAA3.tmp",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819211529528.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819211313159.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819205917614.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819205618089.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819204828245.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819203852102.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819195514144.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819194907413.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819194543330.png",
+    "vuln-lab/PortSwigger Web Security Academy/API/img/file-20260819193850814.png",
+    "Protocol/HTTPandHTTPS.md",
+    "Code_languages/Go/数据处理与格式转换.md",
+    "vuln-lab/PortSwigger Web Security Academy/XML External Entity (XXE)/XML External Entity (XXE).md",
     "Code_languages/Go/fmt打印与格式化.md",
-    "Code_languages/Java.md",
-    "Tools/密码破解/hashcat与John the Ripper.md"
+    "Code_languages/Go/文件操作.md",
+    "Code_languages/Go/数据.md",
+    "Code_languages/Go/输入.md",
+    "vuln-lab/PHP类型比较绕过-MD5-Hash比较漏洞.md",
+    "vuln-lab/OWASP-Top-10.md",
+    "vuln-lab/伪协议文件读取-信息枚举清单.md",
+    "vuln-lab/PHP Deserialization/PHP Deserialization.md",
+    "Tools/信息收集/nmap.md",
+    "Tools/网络请求/curl.md",
+    "Tools/漏洞利用/Metasploit.md",
+    "Writeups/log4j(2.8.1).md",
+    "Tools/信息收集/ffuf.md",
+    "Tools/开发工具/docker.md",
+    "Writeups/Orion.md",
+    "Writeups/Earth.md",
+    "Tools/网络请求/nc.md",
+    "Writeups/HTB_Cap(IDOR).md",
+    "Tools/信息收集/subfinder.md",
+    "Linux/Linux文本处理命令.md"
   ]
 }

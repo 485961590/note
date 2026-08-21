@@ -6,5 +6,4 @@ git push -u origin main
 
 git pull origin main 拉取远程到本地（Github上修改后本地提交需使用）  
 git push  # 简写形式（首次推送后自动关联分支）  
-Wjj123456!
 ```
