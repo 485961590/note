@@ -20,23 +20,8 @@
               "icon": "lucide-file",
               "title": "命令执行"
             }
-          },
-          {
-            "id": "ecc5e105b370fabc",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "vuln-lab/身份认证与授权/Web身份认证授权与访问控制.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Web身份认证授权与访问控制"
-            }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -173,7 +158,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "vuln-lab/身份认证与授权/Web身份认证授权与访问控制.md",
+                "file": "中网信安/课件/01 反弹shell.pdf",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -200,8 +185,20 @@
       "bases:新建数据库": false
     }
   },
-  "active": "ecc5e105b370fabc",
+  "active": "f0b605393a06d825",
   "lastOpenFiles": [
+    "课程资料/钓鱼大师.pdf",
+    "课程资料/逻辑漏洞1.pdf",
+    "课程资料/逻辑漏洞.pdf",
+    "课程资料/网络基础.pdf",
+    "课程资料/源码安装和shell基础.pdf",
+    "课程资料/未授权访问漏洞-补充.pdf",
+    "课程资料/未授权访问漏洞.pdf",
+    "课程资料/文件包含漏洞利用姿势.pdf",
+    "课程资料/微信小程序抓包实战教程.pdf",
+    "课程资料/常见中间件历史漏洞.pdf",
+    "课程资料/安卓HTTPS抓包实战.pdf",
+    "vuln-lab/身份认证与授权/Web身份认证授权与访问控制.md",
     "vuln-lab/钓鱼/RLO反转后缀-自解压程序钓鱼.md",
     "vuln-lab/PortSwigger Web Security Academy/File path traversal.md",
     "Writeups/2026-07-14-成都文理学院.md",
@@ -212,16 +209,9 @@
     "Writeups/HTB_Kobold（借壳(docker)提权）.md",
     "Writeups/matrix-breakout-2-morpheus.md",
     "Writeups/PHP类型混淆绕过.md",
-    "Writeups_PDF/PHP类型混淆绕过.pdf",
     "SRC测试地图.md",
     "Tools/信息收集/nmap.md",
-    "Writeups_PDF/matrix-breakout-2-morpheus.pdf",
-    "Writeups_PDF/Earth(审计二进制文件提权).pdf",
     "Writeups/RaVen2(Mysql UDF提权).md",
-    "Writeups_PDF/RaVen2(Mysql UDF提权).pdf",
-    "Writeups_PDF/HTB_Kobold（借壳(docker)提权）.pdf",
-    "Writeups_PDF/HTB_Cap(IDOR).pdf",
-    "Writeups_PDF/DevGuru(Gitea源码泄露，-1提权).pdf",
     "tmp/命令执行.md",
     "tmp/img/file-20260824203739328.png",
     "tmp/img/file-20260824203519460.png",
@@ -233,10 +223,6 @@
     "tmp/img/file-20260824185159045.png",
     "tmp/img/file-20260824185153022.png",
     "tmp/img/file-20260824184610917.png",
-    "tmp/img",
-    "tmp",
-    "安全搜索语法/正则表达式语法.pdf",
-    "vuln-lab/身份认证与授权/Web身份认证授权与访问控制.md",
     "Protocol/协议地图.md",
     "Tools/抓包分析/Wireshark使用指南.md",
     "Protocol/DNS.md",
@@ -246,7 +232,6 @@
     "Protocol/TCP_UDP_HTTP_HTTPS.md",
     "Protocol/FTP.md",
     "Protocol/ARP.md",
-    "Tools/信息收集/SecLists使用指南.md",
-    "vuln-lab/文件上传/文件上传漏洞.md"
+    "Tools/信息收集/SecLists使用指南.md"
   ]
 }
