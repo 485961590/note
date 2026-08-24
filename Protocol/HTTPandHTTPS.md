@@ -8,7 +8,12 @@ HTTP（HyperText Transfer Protocol，超文本传输协议）是 Web 通信的�
 - **可扩展**：通过方法、头部、状态码灵活扩展功能
 
 ---
-### . GET（查 / 点菜）
+
+## 〇、HTTP 方法入门（先建立直觉）
+
+> 本章用比喻建立直觉，规范的完整定义（安全/幂等/可缓存）见 2.3 节方法表。
+
+### 1. GET（查 / 点菜）
 
 - **含义**：获取资源。向服务器索要数据。
 - **特点**：**最 benign（无害）的方法**。参数直接拼在 URL 后面（比如 `?id=1`）。GET 请求不应该去“修改”服务器上的任何东西，只是“看”。
@@ -108,7 +113,7 @@ METHOD SP request-target SP HTTP-version CRLF
 三个字段用空格分隔：
 - **METHOD**：请求方法（GET / POST / PUT / DELETE 等）
 - **request-target**：路径 + 查询参数（origin-form: `/path?query`，或 absolute-form: `http://host/path` 用于代理）
-- **HTTP-version**：协议版本（HTTP/1.0、HTTP/1.1、HTTP/2 以伪头部形式表达）
+- **HTTP-version**：协议版本（HTTP/1.0、HTTP/1.1；HTTP/2 起请求行不复存在，版本由所用连接隐含决定）
 
 #### 空行
 
@@ -149,7 +154,7 @@ METHOD SP request-target SP HTTP-version CRLF
 |------|------|------|
 | `Authorization` | 携带认证凭据。格式取决于认证类型：`Basic`（Base64 编码用户名:密码）、`Bearer`（Token）、`Digest`。 | `Authorization: Bearer eyJhbGciOi...` |
 | `Proxy-Authorization` | 向代理服务器认证的凭据，格式同 `Authorization`。 | `Proxy-Authorization: Basic dXNlcjpwYXNz` |
-| `Cookie` | 携带当前域名下存储的所有 Cookie（不含 HttpOnly 的仍会被发往服务器）。每个 `; ` 分隔一个键值对。 | `Cookie: session=abc123; csrf_token=xyz` |
+| `Cookie` | 携带当前域名下存储的所有 Cookie（HttpOnly 的 Cookie 同样会照常发送给服务器，HttpOnly 只禁止 JS 读取，不影响传输）。每个 `; ` 分隔一个键值对。 | `Cookie: session=abc123; csrf_token=xyz` |
 
 **⑤ 请求体描述类**
 
@@ -305,7 +310,7 @@ HTTP-version SP status-code SP reason-phrase CRLF
 
 - **HTTP-version**：协议版本
 - **status-code**：三位数字状态码
-- **reason-phrase**：可读的状态描述（HTTP/2 中删除，HTTP/3 以伪头部表达）
+- **reason-phrase**：可读的状态描述（HTTP/2、HTTP/3 已彻底移除，状态行只剩状态码）
 
 ### 3.2 响应头部详解
 
@@ -345,7 +350,7 @@ HTTP-version SP status-code SP reason-phrase CRLF
 | `ETag` | 实体标签，标识资源的特定版本（通常是内容的哈希或版本号）。强验证符用双引号 `"abc123"`，弱验证符以 `W/` 开头 `W/"abc123"`（内容语义相同但字节不同）。 | `ETag: "33a64df551425f"` |
 | `Last-Modified` | 资源最后修改时间（GMT），精确到秒。精确度不如 ETag（秒级 vs 内容级）。 | `Last-Modified: Mon, 22 Jun 2026 08:00:00 GMT` |
 | `Vary` | 告诉缓存：响应内容会因指定请求头的值不同而变化。`Vary: Accept-Encoding` 表示 gzip 版和无压缩版需分开缓存。**多个值用逗号分隔，或使用多个 Vary 头。** | `Vary: Accept-Encoding, Origin` |
-| `Age` | 响应在缓存中已存活的秒数。透过代理时表示响应不是新鲜的（从源服务器生成到现在的总时间，由缓存累加）。 | `Age: 3600` |
+| `Age` | 响应自源站生成起经过的总秒数（由沿途各级缓存累加）。Age 小于 max-age 时仍属新鲜可直接复用，达到 max-age 才需重新验证。 | `Age: 3600` |
 
 **④ 连接控制类**
 
@@ -391,7 +396,7 @@ Set-Cookie: <name>=<value>; <属性1>; <属性2>; ...
 | `SameSite` | 跨站请求策略：`Strict`（完全不跨站）、`Lax`（顶级导航允许，推荐）、`None`（允许跨站，须配 `Secure`）。**Chrome 默认 Lax。** | 易受 CSRF 攻击 |
 | `__Host-` 前缀 | 特殊前缀，Cookie 名以 `__Host-` 开头时，浏览器强制要求：`Secure` + `Path=/` + 无 `Domain`。最严格约束。 | — |
 | `__Secure-` 前缀 | Cookie 名以 `__Secure-` 开头时，浏览器强制要求 `Secure`。 | — |
-| `Partitioned` | 存储分区（CHIPS），Cookie 与顶级站点绑定而非只能第三方共享。`SameSite=None` 时可加。 | — |
+| `Partitioned` | 存储分区（CHIPS）：第三方 Cookie 按顶级站点分区隔离、互不可见，兼顾第三方功能与隐私，需同时设置 `SameSite=None`。 | — |
 
 示例：
 
@@ -407,10 +412,10 @@ CORS 头由 OPTIONS 预检响应和实际响应返回：
 | 头部 | 说明 | 示例 |
 |------|------|------|
 | `Access-Control-Allow-Origin` | 允许跨域访问的来源。`*`（不含凭据）或具体域名。**必须包含协议和端口（80/443 也需一致），不能多个值。** | `Access-Control-Allow-Origin: https://app.example.com` |
-| `Access-Control-Allow-Credentials` | `true` 表示允许携带 Cookie 的跨域请求。此时 `Allow-Origin` 不能是 `*`，且 `Access-Control-Expose-Headers` 中需包含 `*` 或用具体值。 | `Access-Control-Allow-Credentials: true` |
+| `Access-Control-Allow-Credentials` | `true` 表示允许携带 Cookie 的跨域请求。此时 `Allow-Origin` 不能是 `*`，必须写明具体来源。 | `Access-Control-Allow-Credentials: true` |
 | `Access-Control-Allow-Methods` | 预检响应中告诉客户端允许哪些方法。 | `Access-Control-Allow-Methods: GET, POST, PUT, DELETE` |
 | `Access-Control-Allow-Headers` | 预检响应中告诉客户端允许哪些自定义请求头。 | `Access-Control-Allow-Headers: Content-Type, Authorization, X-Custom` |
-| `Access-Control-Max-Age` | 预检响应缓存秒数，在此期间浏览器不发送预检。上限通常 86400（24h）。 | `Access-Control-Max-Age: 86400` |
+| `Access-Control-Max-Age` | 预检响应缓存秒数，在此期间浏览器不发送预检。注意浏览器设了上限：Chromium 截断为 7200（2h）、Firefox 为 86400（24h），声明再大也没用。 | `Access-Control-Max-Age: 86400` |
 | `Access-Control-Expose-Headers` | 告诉客户端允许 JS 从响应中读取哪些头部（默认仅 `Cache-Control`、`Content-Language`、`Content-Type`、`Expires`、`Last-Modified`、`Pragma` 可读）。 | `Access-Control-Expose-Headers: X-Total-Count, Link` |
 
 **⑨ 安全类响应头**
@@ -658,7 +663,7 @@ HTTPS 默认端口 443（HTTP 默认 80）。
 | SSL 2.0 | 1995 | 2011 年废弃 | 严重安全缺陷（MD5、无握手完整性验证） |
 | SSL 3.0 | 1996 | 2015 年废弃 | POODLE 攻击，禁用 |
 | TLS 1.0 | 1999 | 2020 年废弃 | 等同于 SSL 3.1，支持 CBC（BEAST 攻击），PCI 标准禁用 |
-| TLS 1.1 | 2006 | 2020 年废弃 | 改进 IV 处理、支持 AEAD |
+| TLS 1.1 | 2006 | 2020 年废弃 | CBC 改用显式 IV（缓解 BEAST 类攻击）；AEAD 是 TLS 1.2 才引入的 |
 | TLS 1.2 | 2008 | 当前主流 | AEAD 加密（GCM、CCM）、SHA-256、灵活密码套件协商 |
 | TLS 1.3 | 2018 | 推荐使用 | 1-RTT 握手（0-RTT 可选）、移除弱算法、前向安全性强制、加密更多握手消息 |
 
@@ -890,7 +895,7 @@ Google 推动的体系，防止 CA 恶意签发或错误签发证书：
 |------|------|------|------|
 | **SSL 剥离** | 中间人拦截 HTTP→HTTPS 的 301 跳转，对客户端维持 HTTP 明文连接 | 完全解密流量 | HSTS 预加载 + `https://` 直接访问 |
 | **降级攻击** | 中间人篡改 ClientHello 支持的版本/套件列表，强制使用弱算法 | 使用可破解的弱加密 | 服务端禁用旧版本（<TLS 1.2）+ 弱套件 |
-| **伪造证书攻击** | 攻击者让客户端信任恶意 CA（或盗取 CA 私钥） | 任意域名冒充 | 证书固定（HPKP 已废弃，用 Expect-CT + CT 日志监控） |
+| **伪造证书攻击** | 攻击者让客户端信任恶意 CA（或盗取 CA 私钥） | 任意域名冒充 | 证书固定（HPKP 与 Expect-CT 均已被浏览器废弃，主流做法是监控 CT 日志及时发现恶意签发） |
 | **中间人代理** | 合法 CA 签发的透明代理证书（企业安全产品），解密后检查再重新加密 | 流量被第三方解密 | 企业环境中是预期的；非企业环境需用户警觉 |
 | **重放攻击** | 记录加密流量后在非原始上下文中重放 | 重复执行幂等操作 | TLS 序列号 + 0-RTT 不可用于非幂等请求 |
 | **协议降级（POODLE）** | 浏览器失败后回退到 SSL 3.0 | padding oracle 逐步猜测明文 | 彻底禁用 SSL 3.0（2014 年） |
@@ -928,8 +933,9 @@ ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:
 # 服务器偏好密码套件（而非客户端偏好）
 ssl_prefer_server_ciphers on;
 
-# 会话票证：开启（有前向安全保护）
-ssl_session_tickets on;
+# 会话票证：TLS 1.2 下 ticket 密钥泄露可解密所有用它恢复的会话，
+# 加固场景建议关闭（TLS 1.3 的 ticket 源自带前向安全的 PSK，风险小得多）
+ssl_session_tickets off;
 
 # OCSP Stapling
 ssl_stapling on;
@@ -1037,8 +1043,8 @@ curl -I https://example.com
 # 详细握手过程（含 TLS 协商和证书）
 curl -v https://example.com
 
-# 仅查看 TLS 握手细节
-curl -w '\nTLS version: %{ssl_verify_result}\n' -so /dev/null https://example.com
+# 查看实际协商到的 TLS 版本（curl 7.75+ 支持 %{tls_version}）
+curl -w '\nTLS version: %{tls_version}\n' -so /dev/null https://example.com
 
 # 查看证书完整信息
 openssl s_client -connect example.com:443 -servername example.com </dev/null 2>/dev/null | openssl x509 -noout -text
@@ -1076,4 +1082,4 @@ curl -sI https://example.com | grep -i strict
 
 > **核心原则：HTTP 定义了 Web 通信的语言；HTTPS 保证了这语言在不可信网络上的安全传递。理解协议，才能理解攻击与防御。**
 
-> **相关文档**：[CVE模板](../CVE_TEMPLATE.md) · [CURL工具](../Tools/curl.md)
+> **相关文档**：[CVE-SQLi模板](../CVE%20template/CVE-sqli-template.md) · [CVE-XSS模板](../CVE%20template/CVE-xss-template.md) · [curl工具](../Tools/网络请求/curl.md)

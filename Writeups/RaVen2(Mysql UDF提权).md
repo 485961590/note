@@ -63,7 +63,6 @@ gobuster fuzz -u <url/FUZZ> -w <wordlist_path> -b 404
 - 版本: WordPress 4.8.7
 - jQuery版本: 1.12.4
 - 登录地址: /wordpress/wp-login.php
-- 存在漏洞: 4.8.7版本存在多个已知安全漏洞
 ### 敏感目录和文件
 - /.DS_Store - Mac系统文件，可能泄露目录结构
 - /vendor/ - PHP依赖目录
@@ -260,3 +259,20 @@ CREATE FUNCTION do_system RETURNS INTEGER SONAME '1518.so';这条有用
 SELECT do_system('chmod +s /bin/bash');
 ```
 
+
+# 攻击原理：
+
+**PHP 邮件组件漏洞 -> 获得 Web Shell -> 泄露 MySQL root 密码 -> MySQL 写入恶意 UDF -> root 提权。**
+- `contact.php` 使用了存在漏洞的 PHPMailer，攻击者借此让服务器执行命令，获得低权限 Web Shell。
+- `wp-config.php` 泄露了 MySQL 的 root 密码。
+- MySQL 进程本身以系统 root 用户运行，同时允许写入任意目录。攻击者把恶意动态库写入 MySQL 插件目录。
+- 通过 MySQL 的 UDF 功能执行系统命令，而命令继承 MySQL 的 root 权限，最终控制整台主机。
+
+**影响：** 攻击者从 Web 权限提升到数据库 root，再提升到操作系统 root，可以读取、修改或删除网站、数据库、用户数据和系统文件。
+
+**修复：** 
+- 升级或替换存在漏洞的 PHPMailer，严格校验邮件参数，避免用户输入进入系统命令。
+- 禁止应用使用 MySQL root，改用权限最小的独立数据库账户，并立即更换已泄露密码。
+- MySQL 必须以专用低权限用户运行，不能以系统 root 运行。
+- 将 `secure_file_priv` 设置为 `NULL` 或受限目录，撤销普通账户的 `FILE` 权限，限制 UDF 和插件目录写入。
+- 由于已经获得 root，应隔离并重建主机，同时检查 Web Shell、SUID、SSH 密钥和计划任务。

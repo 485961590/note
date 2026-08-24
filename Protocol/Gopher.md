@@ -118,7 +118,7 @@ gopher 在 SSRF 中的价值：
 | 客户端 | 是否支持 gopher |
 |--------|----------------|
 | curl / libcurl（PHP cURL 扩展、Python pycurl、curl_cffi 等） | 支持（默认） |
-| GNU Wget | 1.16 起已移除 |
+| GNU Wget | 不支持（上游从未实现过 gopher；旧文中“1.16 起移除”的说法有误） |
 | Python urllib / requests | 不支持 |
 | Java HttpURLConnection | 不支持 |
 | Node.js http 模块 | 不支持 |
