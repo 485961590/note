@@ -1,251 +1,371 @@
-# ffuf
+# ffuf 目录发现实用指南
 
-ffuf（Fuzz Faster U Fool）是基于 Go 编写的高性能 Web 模糊测试工具。它采用多线程与异步 I/O，速度远快于同类工具，常用于目录/文件爆破、虚拟主机枚举、参数与字段模糊测试。
+`ffuf` 通过字典替换 URL 中的 `FUZZ`，批量请求网站路径，常用于发现目录、文件和备份文件。
 
-## 基本语法
+以下命令只适用于自己控制的主机、靶场或明确授权的测试目标。示例中的 `TARGET` 需要替换为目标地址，`WORDLIST` 需要替换为本机字典路径。
+
+## 1. 基本语法
 
 ```bash
-ffuf -w <字典文件> -u <URL> [选项]
+ffuf -w WORDLIST -u http://TARGET/FUZZ
 ```
 
-URL 中的 `FUZZ` 是占位符，ffuf 会用字典中的每一行替换它发起请求。
+`FUZZ` 是必须的占位符。ffuf 会依次用字典中的每一行替换它：
 
----
+```text
+admin
+login
+robots.txt
+```
 
-## 一、参数速查
+会被尝试为：
 
-### 目标与字典
+```text
+http://TARGET/admin
+http://TARGET/login
+http://TARGET/robots.txt
+```
 
-| 选项 | 说明 |
-|------|------|
-| `-u <URL>` | 目标 URL，需包含 `FUZZ` 占位符 |
-| `-w <FILE>` | 字典文件；多字典用逗号分隔，可用 `:` 重命名占位符（见高级用法） |
-| `-e <EXT>` | 自动追加扩展名，如 `-e .php,.bak,.zip` |
-| `-ic` | 忽略字典中的注释行 |
-| `-mode` | 多字典组合模式：`clusterbomb`（默认，笛卡尔积）/ `pitchfork`（按行对齐） |
+先确认 ffuf 已安装，以及当前版本支持哪些参数：
 
-### 请求设置
+```bash
+ffuf -h
+ffuf -V
+```
 
-| 选项 | 说明 |
-|------|------|
-| `-X <METHOD>` | HTTP 方法（GET / POST / PUT...） |
-| `-d <DATA>` | POST 请求体 |
-| `-H <HEADER>` | 自定义请求头，可多次使用 |
-| `-b <COOKIE>` | 设置 Cookie |
-| `-x <PROXY>` | 代理（http / https / socks5） |
+## 2. 常用字典
+
+Kali 中常见的字典路径如下，实际路径以本机安装情况为准：
+
+| 字典                                                             | 适用场景           |
+| -------------------------------------------------------------- | -------------- |
+| `/usr/share/wordlists/dirb/common.txt`                         | 快速初筛，字典较小      |
+| `/usr/share/seclists/Discovery/Web-Content/common.txt`         | 常用 Web 路径      |
+| `/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt` | 更全面的目录发现       |
+| 自己整理的路径文件                                                      | 针对特定框架、CMS 或项目 |
+
+先用小字典确认目标路径和参数，再换大字典。大字典并不一定带来更好的结果，只会增加请求数量和误报处理成本。
+
+## 3. 参数速查
+
+### 目标和请求
+
+| 参数 | 作用 |
+| --- | --- |
+| `-u URL` | 目标 URL，通常包含 `FUZZ` |
+| `-w FILE` | 指定字典文件 |
+| `-e .EXT1,.EXT2` | 给每个字典词追加文件扩展名 |
+| `-H HEADER` | 添加请求头，可重复使用 |
+| `-b COOKIE` | 发送 Cookie |
+| `-X METHOD` | 指定 HTTP 方法 |
+| `-d DATA` | 发送请求体 |
 | `-r` | 跟随重定向 |
-| `-request <FILE>` | 从原始请求文件加载模板 |
+| `-x PROXY` | 通过 HTTP、HTTPS 或 SOCKS5 代理 |
+| `-request FILE` | 从原始 HTTP 请求文件加载请求模板 |
+| `-request-proto http/https` | 配合 `-request` 指定协议 |
 
-### 线程与速率
+### 匹配和过滤
 
-| 选项 | 说明 |
-|------|------|
-| `-t <N>` | 线程数，默认 40 |
-| `-rate <N>` | 每秒最大请求数 |
-| `-p <SEC>` | 每线程请求间隔（秒） |
-| `-timeout <SEC>` | 请求超时，默认 10 秒 |
-| `-maxtime <SEC>` | 最大运行时间 |
+| 参数          | 作用                             |
+| ----------- | ------------------------------ |
+| `-mc CODES` | 只显示指定状态码                       |
+| `-fc CODES` | 隐藏指定状态码                        |
+| `-ms SIZE`  | 只显示指定响应大小                      |
+| `-fs SIZE`  | 隐藏指定响应大小                       |
+| `-mw WORDS` | 只显示指定单词数                       |
+| `-fw WORDS` | 隐藏指定单词数                        |
+| `-ml LINES` | 只显示指定行数                        |
+| `-fl LINES` | 隐藏指定行数                         |
+| `-mr REGEX` | 只显示正文匹配正则表达式的响应                |
+| `-ac`       | 自动校准并过滤统一的错误页面                 |
+| -recursion  | 递归查询-recursion-depth 3（指定递归层数） |
 
-### 匹配与过滤
+多个状态码或数值用逗号分隔，例如 `-fc 404,403`。范围可以写成 `-fs 1000-1200`。
 
-| 选项 | 说明 |
-|------|------|
-| `-mc <CODES>` | 匹配状态码，默认 `200,204,301,302,307,401,403,405,500` |
-| `-fc <CODES>` | 过滤状态码 |
-| `-ms / -fs <SIZE>` | 按响应大小匹配 / 过滤（支持区间如 `-fs 1000-2000`） |
-| `-mw / -fw <N>` | 按响应单词数匹配 / 过滤 |
-| `-ml / -fl <N>` | 按响应行数匹配 / 过滤 |
-| `-ac` | 自动校准过滤（自动识别并过滤统一的模板响应） |
+### 速度和输出
 
-### 输出
+| 参数 | 作用 |
+| --- | --- |
+| `-t N` | 并发线程数，默认通常为 40 |
+| `-rate N` | 限制每秒请求数 |
+| `-p SEC` | 每个请求增加固定或随机延迟 |
+| `-timeout SEC` | 单个请求超时时间 |
+| `-maxtime SEC` | 本次扫描最长运行时间 |
+| `-o FILE` | 保存扫描结果 |
+| `-of FORMAT` | 输出格式，如 `json`、`csv`、`html`、`md` |
+| `-c` | 开启彩色输出 |
+| `-s` | 隐藏额外提示，只保留结果 |
+| `-v` | 显示更完整的 URL 和重定向信息 |
 
-| 选项          | 说明                                   |
-| ----------- | ------------------------------------ |
-| `-o <FILE>` | 输出文件                                 |
-| `-of <FMT>` | 输出格式（json / csv / html / md，默认 json） |
-| `-s`        | 静默模式                                 |
-| `-v`        | 详细输出                                 |
-| -c          | 输出带色彩                                |
+## 4. 基础目录发现
 
----
-
-## 二、基础用法
-
-```bash
-# 1. 目录扫描（字典逐行替换 FUZZ）
-ffuf -w wordlist.txt -u http://target.com/FUZZ
-
-# 2. 指定扩展名（找备份/源码文件）
-ffuf -w wordlist.txt -u http://target.com/FUZZ -e .php,.html,.bak
-
-# 3. 只关注指定状态码
-ffuf -w wordlist.txt -u http://target.com/FUZZ -mc 200,301,403
-
-# 4. 过滤统一 404 页面大小，去误报
-ffuf -w wordlist.txt -u http://target.com/FUZZ -fs 4040
-
-# 5. 多线程加速 + 输出 JSON
-ffuf -w wordlist.txt -u http://target.com/FUZZ -t 100 -o result.json -of json
-```
-
----
-
-## 三、高级用法
-
-### 1. 多字典组合模式
-
-`-w` 可用 `字典:名字` 的写法给字典命名占位符，URL 与请求中用该名字代替 `FUZZ`。多字典的排列方式由 `-mode` 决定：
-
-- `clusterbomb`（默认）：笛卡尔积，遍历所有组合，适合账号、密码各自独立爆破
-- `pitchfork`：多字典按行对齐并行，适合逐行对应的键值对
+最基本的目录扫描：
 
 ```bash
-# clusterbomb：账号 x 密码 全组合
-ffuf -w users.txt:W1,passwords.txt:W2 -u http://target.com/login -X POST \
-  -d "username=W1&password=W2" -fc 200
-
-# pitchfork：用户名与密码逐行对应（如收集到的 用户:密码 列表）
-ffuf -mode pitchfork -w users.txt:W1,passwords.txt:W2 \
-  -u http://target.com/login -X POST -d "username=W1&password=W2" -fc 200
+ffuf -w /usr/share/wordlists/dirb/common.txt \
+  -u http://TARGET/FUZZ \
+  -c
 ```
 
-### 2. 从 Burp 原始请求模糊
-
-把 Burp 中截获的请求另存为文件，将需要爆破的位置改成 `FUZZ`，用 `-request` 加载，无需手动补全所有请求头：
+如果目标部署在某个子目录，`FUZZ` 应放在对应位置：
 
 ```bash
-# request.txt 内容示例（POST body 中的 FUZZ 即爆破点）：
-#   POST /api/login HTTP/1.1
-#   Host: target.com
-#   User-Agent: Mozilla/5.0 ...
-#   Content-Type: application/json
-#
-#   {"username":"FUZZ","password":"admin"}
-
-ffuf -request request.txt -w usernames.txt -mc all -fc 400
+ffuf -w common.txt -u http://TARGET/app/FUZZ -c
 ```
 
-注意：`-request` 默认按 https 构造请求，目标是 http 时加 `-request-proto http`。
-
-### 3. 匹配与过滤的组合逻辑
-
-- 单个选项内多个值用逗号分隔，满足任一即命中（OR），如 `-fs 1000-2000` 支持区间
-- 多个 filter 之间默认 OR：任一命中即丢弃，可用 `-fmode and` 改为全部命中才丢弃
-- 多个 matcher 之间默认 OR：任一命中即显示，可用 `-mmode and` 改为全部命中才显示
+如果想测试带结尾斜杠的路径，可以写成：
 
 ```bash
-# 正则匹配：命中正则才显示
-ffuf -w wordlist.txt -u http://target.com/FUZZ -mr "admin|root"
-
-# -mmode and：状态码为 200 且 大小落在区间内才显示
-ffuf -w wordlist.txt -u http://target.com/FUZZ -mc 200 -ms 500-3000 -mmode and
-
-# 多维度过滤：丢掉 404/403 状态，同时丢掉 4096 字节的模板响应
-ffuf -w wordlist.txt -u http://target.com/FUZZ -fc 404,403 -fs 4096
+ffuf -w common.txt -u http://TARGET/FUZZ/ -c
 ```
 
-### 4. 递归扫描
+这两种写法请求的路径不同，按目标站点的路由习惯选择。发现一个目录后，应手动访问并继续针对该目录扫描。
+
+## 5. 扫描常见文件扩展名
+
+使用 `-e` 自动测试扩展名：
 
 ```bash
-# 递归进入发现的目录，最深 3 层
-ffuf -w wordlist.txt -u http://target.com/FUZZ -recursion -recursion-depth 3
-
-# greedy 策略：对每个命中都继续递归（默认 default 只对目录类命中递归）
-ffuf -w wordlist.txt -u http://target.com/FUZZ -recursion -recursion-strategy greedy
-
-# 每层作业单独限时，防止递归失控
-ffuf -w wordlist.txt -u http://target.com/FUZZ -recursion -recursion-depth 3 -maxtime-job 120
+ffuf -w /usr/share/wordlists/dirb/common.txt \
+  -u http://TARGET/FUZZ \
+  -e .php,.txt,.bak,.zip \
+  -c
 ```
 
-### 5. 联动 Burp
+对于字典中的 `admin`，通常会尝试 `admin`、`admin.php`、`admin.txt`、`admin.bak` 和 `admin.zip`。
+
+扩展名应根据目标技术选择，不要一次添加几十种。Linux/PHP 目标可以先试 `.php,.txt,.bak,.zip`，静态站点可以先试 `.html,.txt`。
+
+## 6. 处理误报
+
+目录扫描最常见的问题不是“没有结果”，而是目标对不存在的路径也返回正常页面。先观察 ffuf 每条结果中的 `Status`、`Size`、`Words` 和 `Lines`，再决定过滤条件。
+
+### 按状态码筛选
+
+只看常见的成功和重定向：
 
 ```bash
-# 全流量经代理进 Burp，可逐条审查
-ffuf -w wordlist.txt -u http://target.com/FUZZ -x http://127.0.0.1:8080
-
-# 只把命中结果回放到 Burp 人工复查（-replay-codes 指定回放哪些状态码）
-ffuf -w wordlist.txt -u http://target.com/FUZZ -fs 4096 \
-  -replay-proxy http://127.0.0.1:8080 -replay-codes 200,302
+ffuf -w common.txt -u http://TARGET/FUZZ \
+  -mc 200,204,301,302,307,401,403
 ```
 
-### 6. 性能与隐身
+只显示 200：
 
 ```bash
-# 高并发 + 每秒限速
-ffuf -w big.txt -u http://target.com/FUZZ -t 100 -rate 2000
-
-# 随机延迟 0.1~0.3 秒，模拟人工访问节奏
-ffuf -w wordlist.txt -u http://target.com/FUZZ -p 0.1-0.3
-
-# 不读取响应体，显著提速（仅按状态码/大小判断时使用）
-ffuf -w wordlist.txt -u http://target.com/FUZZ -ignore-body
-
-# 遇错即停：-sa 遇任何错误即停（隐含 -se -sc）；-sc 遇伪 403 即停
-ffuf -w wordlist.txt -u http://target.com/FUZZ -sa
-
-# 整体限时 + 缩短单次请求超时
-ffuf -w wordlist.txt -u http://target.com/FUZZ -maxtime 600 -timeout 5
+ffuf -w common.txt -u http://TARGET/FUZZ -mc 200
 ```
 
-### 7. 断点续扫与批量输出
+隐藏 404 和 403：
 
 ```bash
-# 中断后可从上次进度续扫（需先 -o 保存 json 状态）
-ffuf -w wordlist.txt -u http://target.com/FUZZ -o scan.json -of json
-ffuf -w wordlist.txt -u http://target.com/FUZZ -o scan.json -of json -resume
-
-# -od 按 job 生成多个结果文件，配合 -of 指定格式
-ffuf -w wordlist.txt -u http://target.com/FUZZ -od ./out -of csv
+ffuf -w common.txt -u http://TARGET/FUZZ -fc 404,403
 ```
 
-### 8. 其他常用组合
+如果使用了 `-mc 200`，403 不会显示，不需要再写 `-fc 403`。如果使用 `-mc all` 查看所有响应，再用 `-fc` 过滤会更直观。
+
+### 过滤统一的错误页面
+
+先请求一个确定不存在的路径，记录返回大小：
 
 ```bash
-# 虚拟主机枚举：Host 头带 FUZZ，按默认站点响应大小过滤
-ffuf -w vhosts.txt -u http://target.com -H "Host: FUZZ.target.com" -fs 1234
-
-# GET 参数名发现：观察哪些参数会被后端处理/反射
-ffuf -w params.txt -u "http://target.com/api/user?FUZZ=1" -fc 404 -ms 123
-
-# Cookie 模糊
-ffuf -w payloads.txt -u http://target.com/admin -b "session=FUZZ" -fs 403
-
-# POST 请求体模糊（JSON 任意字段均可替换）
-ffuf -w payloads.txt -u http://target.com/api -X POST -d '{"id":"FUZZ"}' -fc 500
+curl -sS -o /dev/null -w 'status=%{http_code} size=%{size_download}\n' \
+  http://TARGET/this-path-should-not-exist-12345
 ```
 
-### 9. 虚拟主机枚举实战（完整流程）
-
-以 HTB 靶机为例：目标 IP `10.129.19.199`，主域 `kobold.htb`，枚举该 IP 上配置的其它虚拟主机。
+假设返回大小为 `422`，使用 `-fs 422` 隐藏相同大小的页面：
 
 ```bash
-# 第一步：确认"无效 vhost"的默认响应基线（发一个必然不存在的名字，看状态码与大小）
-ffuf -u http://10.129.19.199 -H "HOST:zzznotexist123.kobold.htb" -mc all -c
-
-# 第二步：正式爆破，过滤默认响应（-fs 154 即基线大小；默认 404 尺寸不同时再加 -fc 404,403）
-ffuf -u http://10.129.19.199 -k -H "HOST:FUZZ.kobold.htb" \
-  -w subdomains-top1million-110000.txt -mc all -fc 404,403 \
-  -fs 154 -o jieguo.csv -of csv
-
-# 替代：让 ffuf 自动校准基线，免手写过滤值（-ac）
-ffuf -u http://10.129.19.199 -H "HOST:FUZZ.kobold.htb" -w vhosts.txt -mc all -ac
+ffuf -w common.txt -u http://TARGET/FUZZ \
+  -mc all -fs 422
 ```
 
-实战要点：
+也可以按单词数或行数过滤：
 
-- vhost 模式所有命中 URL 都是同一 IP，控制台看不出差别；看 CSV 的 `Input` 列，或终端核对时加 `-v`
-- `-fs 154` 必须先用第一步确认基线，否则整个过滤基准就是错的
-- 110k 子域名字典噪音较多（大量 `cdn/static/img` 类服务子域），可先跑前 10k 或专用 vhost 字典，命中后再扩大
-- `-c` 只影响终端彩色显示，写文件时可去掉
-- `-k` 跳过 TLS 校验，目标为 http 时冗余、跳到 https 时仍有效
+```bash
+ffuf -w common.txt -u http://TARGET/FUZZ -fw 23
+ffuf -w common.txt -u http://TARGET/FUZZ -fl 12
+```
 
-> 提示：`-mmode`/`-fmode` 默认都是 `or`；字典可用 `-ic` 跳过 `#` 注释行；`-c` 开启彩色输出便于人工扫视结果。
+### 自动校准
 
----
+不想手动找错误页面大小时，可以先试 `-ac`：
 
-## 实用技巧
+```bash
+ffuf -w common.txt -u http://TARGET/FUZZ -ac
+```
 
-- **优先用 `-ac` 自动校准**：目标返回统一模板时（如全部 200 的伪 404），能自动识别并过滤
-- **先粗扫再精筛**：先用 `-mc 200,301,302` 粗扫，再用 `-fs` 精确去误报
-- **真实环境限速**：加 `-rate` 控制请求频率，避免触发封禁
-- **模糊位置灵活**：URL、请求头、Cookie、POST 请求体均可作为 `FUZZ` 模糊位置
+如果页面内容每次都变化，自动校准可能不稳定。这时手动确认一个不存在路径，再使用 `-fs`、`-fw` 或 `-fl`，并复查过滤后是否误删了真实目录。
+
+## 7. 登录后目录发现
+
+需要登录才能访问的目录，可以带上现有 Cookie：
+
+```bash
+ffuf -w common.txt \
+  -u http://TARGET/FUZZ \
+  -b 'session=SESSION_VALUE' \
+  -c
+```
+
+也可以添加请求头：
+
+```bash
+ffuf -w common.txt \
+  -u http://TARGET/FUZZ \
+  -H 'Authorization: Bearer TOKEN' \
+  -H 'Accept: text/html' \
+  -c
+```
+
+Token 和 Cookie 只放在授权环境中使用，不要把真实值写入公开的命令记录或结果文件。
+
+## 8. 使用原始请求模板
+
+如果请求依赖多个请求头、Cookie 或特殊请求体，可以从 Burp 等工具导出原始请求，将需要替换的位置改为 `FUZZ`：
+
+```text
+GET /FUZZ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0
+Accept: text/html
+Connection: close
+
+```
+
+保存为 `request.txt` 后执行：
+
+```bash
+ffuf -request request.txt \
+  -request-proto http \
+  -w common.txt \
+  -mc 200,301,302,403
+```
+
+如果原始请求是 HTTPS，将 `-request-proto http` 改为 `-request-proto https`。请求文件中的 `Content-Length` 如果与修改后的请求体不一致，优先删除它，让客户端重新处理，或根据当前版本帮助调整。
+
+## 9. 递归扫描
+
+发现目录后自动继续扫描：
+
+```bash
+ffuf -w common.txt \
+  -u http://TARGET/FUZZ \
+  -recursion \
+  -recursion-depth 2 \
+  -c
+```
+
+递归模式要求 URL 以 `FUZZ` 结尾，例如 `http://TARGET/FUZZ`。如果写成 `http://TARGET/FUZZ?x=1`，递归通常无法按预期工作。
+
+递归扫描请求量会快速增加，先使用小字典和较浅深度。发现结果后，手动针对重点目录重新扫描通常更容易控制。
+
+## 10. 限速和保存结果
+
+靶场中可以适当提高并发：
+
+```bash
+ffuf -w common.txt -u http://TARGET/FUZZ -t 80 -c
+```
+
+目标响应变慢或出现大量超时时，降低并发并限制速率：
+
+```bash
+ffuf -w common.txt -u http://TARGET/FUZZ \
+  -t 20 -rate 100 -timeout 10
+```
+
+保存 JSON 结果：
+
+```bash
+ffuf -w common.txt -u http://TARGET/FUZZ \
+  -o ffuf-result.json -of json
+```
+
+保存 CSV，方便用表格软件查看：
+
+```bash
+ffuf -w common.txt -u http://TARGET/FUZZ \
+  -o ffuf-result.csv -of csv
+```
+
+并发和速率应根据目标承受能力调整。授权测试也应避免无意义地制造大量请求。
+
+## 11. 一套实用流程
+
+### 第一步：小字典初扫
+
+```bash
+ffuf -w /usr/share/wordlists/dirb/common.txt \
+  -u http://TARGET/FUZZ \
+  -ac -c
+```
+
+### 第二步：补充文件后缀
+
+```bash
+ffuf -w /usr/share/wordlists/dirb/common.txt \
+  -u http://TARGET/FUZZ \
+  -e .php,.txt,.bak,.zip \
+  -ac -c
+```
+
+### 第三步：换大字典复查
+
+```bash
+ffuf -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt \
+  -u http://TARGET/FUZZ \
+  -e .php,.txt,.bak \
+  -ac -t 40 \
+  -o ffuf-result.json -of json -c
+```
+
+### 第四步：针对发现的目录继续扫描
+
+例如发现 `/admin/`：
+
+```bash
+ffuf -w common.txt -u http://TARGET/admin/FUZZ -e .php,.txt -ac -c
+```
+
+## 12. 常见问题
+
+### 结果全部是同一个状态码或大小
+
+这通常是软 404 或统一跳转。使用 `-ac`，或者先请求随机不存在路径，再用 `-fs`、`-fw` 或 `-fl` 过滤基线响应。
+
+### 明明有目录，却没有扫描结果
+
+依次检查：
+
+- URL 是否正确，`FUZZ` 是否拼在正确位置；
+- 目标是否需要结尾斜杠或固定前缀；
+- 是否需要 `Host`、Cookie 或 Authorization 请求头；
+- 是否使用 `-mc 200` 导致 301、302、403 等结果被排除；
+- 字典是否为空、路径是否写错。
+
+### 递归模式没有继续扫描
+
+确认 URL 是以 `FUZZ` 结尾的形式，例如：
+
+```bash
+ffuf -w common.txt -u http://TARGET/FUZZ -recursion
+```
+
+### 请求太慢或大量超时
+
+降低 `-t`，设置合理的 `-timeout`，必要时使用 `-rate` 限制请求速率。不要只通过不断提高线程数解决问题。
+
+### `-e` 扫描结果太多
+
+扩展名越多，请求量越大。先按目标技术保留少量扩展名，再对发现的目录单独补扫。
+
+## 快速记忆
+
+- 基础目录：`ffuf -w common.txt -u http://TARGET/FUZZ`
+- 文件扩展名：`-e .php,.txt,.bak`
+- 看指定状态：`-mc 200,301,302,403`
+- 过滤状态：`-fc 404`
+- 过滤软 404：`-fs SIZE` 或 `-ac`
+- 登录后扫描：`-b 'session=VALUE'` 或 `-H 'Authorization: Bearer TOKEN'`
+- 递归发现：`-recursion -recursion-depth 2`
+- 保存结果：`-o result.json -of json`

